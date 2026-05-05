@@ -1,0 +1,92 @@
+export const INDICATORS = [
+  {
+    id: 'NY.GDP.MKTP.KD.ZG',
+    label: 'GDP Growth Rate',
+    description: 'GDP growth rate (annual %)',
+    format: 'percent',
+  },
+  {
+    id: 'NY.GDP.MKTP.CD',
+    label: 'GDP',
+    description: 'Gross Domestic Product (current US$)',
+    format: 'currency_billions',
+  },
+  {
+    id: 'NY.GDP.PCAP.CD',
+    label: 'GDP Per Capita',
+    description: 'GDP per capita (current US$)',
+    format: 'currency',
+  },
+  {
+    id: 'SL.UEM.TOTL.ZS',
+    label: 'Unemployment Rate',
+    description: 'Unemployment, total (% of total labor force)',
+    format: 'percent',
+  },
+  {
+    id: 'FP.CPI.TOTL.ZG',
+    label: 'Inflation Rate',
+    description: 'Consumer price inflation (annual %)',
+    format: 'percent',
+  },
+  {
+    id: 'NE.TRD.GNFS.ZS',
+    label: 'Trade (% of GDP)',
+    description: 'Exports plus imports as a percentage of GDP',
+    format: 'percent',
+  },
+  {
+    id: 'GC.DOD.TOTL.GD.ZS',
+    label: 'Government Debt (% of GDP)',
+    description: 'Central government debt as a percentage of GDP',
+    format: 'percent',
+  },
+  {
+    id: 'SP.POP.TOTL',
+    label: 'Population',
+    description: 'Total population',
+    format: 'number_millions',
+  },
+  {
+    id: 'BX.KLT.DINV.WD.GD.ZS',
+    label: 'FDI Inflows (% of GDP)',
+    description: 'Foreign direct investment, net inflows (% of GDP)',
+    format: 'percent',
+  },
+  {
+    id: 'SH.XPD.CHEX.GD.ZS',
+    label: 'Health Expenditure (% of GDP)',
+    description: 'Current health expenditure as a percentage of GDP',
+    format: 'percent',
+  },
+  {
+    id: 'SE.XPD.TOTL.GD.ZS',
+    label: 'Education Expenditure (% of GDP)',
+    description: 'Government expenditure on education as a percentage of GDP',
+    format: 'percent',
+  },
+  {
+    id: 'NY.GNS.ICTR.ZS',
+    label: 'Gross Savings (% of GDP)',
+    description: 'Gross savings as a percentage of GDP',
+    format: 'percent',
+  },
+  {
+    id: 'NE.EXP.GNFS.ZS',
+    label: 'Exports (% of GDP)',
+    description: 'Exports of goods and services as a percentage of GDP',
+    format: 'percent',
+  },
+  {
+    id: 'NE.IMP.GNFS.ZS',
+    label: 'Imports (% of GDP)',
+    description: 'Imports of goods and services as a percentage of GDP',
+    format: 'percent',
+  },
+  {
+    id: 'FR.INR.LEND',
+    label: 'Lending Interest Rate',
+    description: 'Lending interest rate charged by banks (%)',
+    format: 'percent',
+  },
+];
