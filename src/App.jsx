@@ -1,24 +1,48 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import ChartView from './components/ChartView';
 import DataTable from './components/DataTable';
 import { fetchIndicatorData } from './api/worldbank';
 import { INDICATORS } from './constants/indicators';
+import { COUNTRIES } from './constants/countries';
 
 const DEFAULTS = {
-  indicator: INDICATORS[0], // GDP Growth Rate
+  indicator: INDICATORS[0],
   countries: ['US', 'DE', 'JP'],
   startYear: 2000,
   endYear: 2023,
   chartType: 'line',
 };
 
+// Parse URL once on module load so useState initialisers only run once
+const INIT = (() => {
+  const p = new URLSearchParams(window.location.search);
+  const indId = p.get('i');
+  const c = p.get('c');
+  const s = parseInt(p.get('s'), 10);
+  const e = parseInt(p.get('e'), 10);
+  const t = p.get('t');
+  return {
+    indicator: INDICATORS.find((i) => i.id === indId) ?? DEFAULTS.indicator,
+    countries: c
+      ? c.split(',').filter((code) => COUNTRIES.some((co) => co.code === code))
+      : DEFAULTS.countries,
+    startYear: isNaN(s) ? DEFAULTS.startYear : Math.max(1960, Math.min(2023, s)),
+    endYear: isNaN(e) ? DEFAULTS.endYear : Math.max(1961, Math.min(2024, e)),
+    chartType: ['line', 'bar', 'area'].includes(t) ? t : DEFAULTS.chartType,
+    normalize: p.get('n') === '1',
+    logScale: p.get('l') === '1',
+  };
+})();
+
 export default function App() {
-  const [indicator, setIndicator] = useState(DEFAULTS.indicator);
-  const [selectedCountries, setSelectedCountries] = useState(DEFAULTS.countries);
-  const [startYear, setStartYear] = useState(DEFAULTS.startYear);
-  const [endYear, setEndYear] = useState(DEFAULTS.endYear);
-  const [chartType, setChartType] = useState(DEFAULTS.chartType);
+  const [indicator, setIndicator] = useState(INIT.indicator);
+  const [selectedCountries, setSelectedCountries] = useState(INIT.countries);
+  const [startYear, setStartYear] = useState(INIT.startYear);
+  const [endYear, setEndYear] = useState(INIT.endYear);
+  const [chartType, setChartType] = useState(INIT.chartType);
+  const [normalize, setNormalize] = useState(INIT.normalize);
+  const [logScale, setLogScale] = useState(INIT.logScale);
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -44,11 +68,45 @@ export default function App() {
     }
   }, [indicator, selectedCountries, startYear, endYear]);
 
-  // Load default view on mount
+  // Immediate fetch on mount; debounced auto-fetch on subsequent changes
+  const isFirst = useRef(true);
   useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (isFirst.current) {
+      isFirst.current = false;
+      fetchData();
+      return;
+    }
+    if (selectedCountries.length === 0) return;
+    const t = setTimeout(fetchData, 700);
+    return () => clearTimeout(t);
+  }, [fetchData]);
+
+  // Keep URL in sync (only non-default values to stay clean)
+  useEffect(() => {
+    const p = new URLSearchParams();
+    if (indicator.id !== DEFAULTS.indicator.id) p.set('i', indicator.id);
+    if (selectedCountries.join(',') !== DEFAULTS.countries.join(','))
+      p.set('c', selectedCountries.join(','));
+    if (startYear !== DEFAULTS.startYear) p.set('s', String(startYear));
+    if (endYear !== DEFAULTS.endYear) p.set('e', String(endYear));
+    if (chartType !== DEFAULTS.chartType) p.set('t', chartType);
+    if (normalize) p.set('n', '1');
+    if (logScale) p.set('l', '1');
+    const qs = p.toString();
+    window.history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
+  }, [indicator.id, selectedCountries, startYear, endYear, chartType, normalize, logScale]);
+
+  // Data-coverage percentage per country (used for badges in sidebar)
+  const coverageMap = useMemo(() => {
+    if (!data) return {};
+    const total = endYear - startYear + 1;
+    return Object.fromEntries(
+      Object.entries(data).map(([code, years]) => {
+        const nonNull = Object.values(years).filter((v) => v !== null).length;
+        return [code, Math.round((nonNull / total) * 100)];
+      }),
+    );
+  }, [data, startYear, endYear]);
 
   return (
     <div className="app">
@@ -60,9 +118,7 @@ export default function App() {
             aria-label="Toggle menu"
             aria-expanded={sidebarOpen}
           >
-            <span />
-            <span />
-            <span />
+            <span /><span /><span />
           </button>
           <div className="header-brand">
             <span className="header-icon">📈</span>
@@ -70,7 +126,7 @@ export default function App() {
           </div>
         </div>
         <p className="header-tagline">
-          Global economic indicators via World Bank Open Data
+          Global economic indicators · World Bank Open Data
         </p>
       </header>
 
@@ -82,6 +138,7 @@ export default function App() {
             aria-hidden="true"
           />
         )}
+
         <Sidebar
           indicator={indicator}
           onIndicatorChange={setIndicator}
@@ -93,6 +150,11 @@ export default function App() {
           onEndYearChange={setEndYear}
           chartType={chartType}
           onChartTypeChange={setChartType}
+          normalize={normalize}
+          onNormalizeChange={setNormalize}
+          logScale={logScale}
+          onLogScaleChange={setLogScale}
+          coverageMap={coverageMap}
           onFetch={fetchData}
           loading={loading}
           isOpen={sidebarOpen}
@@ -118,6 +180,8 @@ export default function App() {
             startYear={startYear}
             endYear={endYear}
             chartType={chartType}
+            normalize={normalize}
+            logScale={logScale}
             loading={loading}
           />
 

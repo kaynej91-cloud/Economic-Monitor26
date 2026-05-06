@@ -4,6 +4,7 @@ import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
+  LogarithmicScale,
   PointElement,
   LineElement,
   BarElement,
@@ -18,6 +19,7 @@ import { getChartValue, getRawFromChart, formatValue, getChartUnit, formatAxisTi
 ChartJS.register(
   CategoryScale,
   LinearScale,
+  LogarithmicScale,
   PointElement,
   LineElement,
   BarElement,
@@ -38,6 +40,12 @@ const PALETTE = [
   { border: '#ec4899', bg: 'rgba(236,72,153,0.12)' },
 ];
 
+function applyNormalize(values) {
+  const first = values.find((v) => v !== null && v !== undefined && v !== 0);
+  if (first == null) return values;
+  return values.map((v) => (v === null ? null : (v / first) * 100));
+}
+
 export default function ChartView({
   data,
   indicator,
@@ -45,6 +53,8 @@ export default function ChartView({
   startYear,
   endYear,
   chartType,
+  normalize,
+  logScale,
   loading,
 }) {
   const years = useMemo(() => {
@@ -61,9 +71,12 @@ export default function ChartView({
       const countryData = data[code] ?? {};
       const color = PALETTE[i % PALETTE.length];
 
+      let values = years.map((y) => getChartValue(countryData[y], indicator.format));
+      if (normalize) values = applyNormalize(values);
+
       return {
         label: country?.name ?? code,
-        data: years.map((y) => getChartValue(countryData[y], indicator.format)),
+        data: values,
         borderColor: color.border,
         backgroundColor: chartType === 'bar' ? color.border + 'cc' : color.bg,
         fill: chartType === 'area' ? 'origin' : false,
@@ -76,7 +89,7 @@ export default function ChartView({
     });
 
     return { labels: years.map(String), datasets };
-  }, [data, indicator, selectedCountries, years, chartType]);
+  }, [data, indicator, selectedCountries, years, chartType, normalize]);
 
   const options = useMemo(
     () => ({
@@ -105,6 +118,8 @@ export default function ChartView({
               const chartVal = ctx.parsed.y;
               if (chartVal === null || chartVal === undefined)
                 return `  ${ctx.dataset.label}: —`;
+              if (normalize)
+                return `  ${ctx.dataset.label}: ${chartVal.toFixed(1)} (index)`;
               const raw = getRawFromChart(chartVal, indicator.format);
               return `  ${ctx.dataset.label}: ${formatValue(raw, indicator.format)}`;
             },
@@ -118,15 +133,17 @@ export default function ChartView({
           border: { color: '#e2e8f0' },
         },
         y: {
+          type: logScale ? 'logarithmic' : 'linear',
           grid: { color: 'rgba(0,0,0,0.04)' },
           ticks: {
             font: { size: 11 },
             color: '#64748b',
-            callback: (value) => formatAxisTick(value, indicator.format),
+            callback: (value) =>
+              normalize ? value.toFixed(0) : formatAxisTick(value, indicator.format),
           },
           title: {
             display: true,
-            text: getChartUnit(indicator.format),
+            text: normalize ? 'Index (start = 100)' : getChartUnit(indicator.format),
             font: { size: 11 },
             color: '#94a3b8',
             padding: { bottom: 8 },
@@ -136,7 +153,7 @@ export default function ChartView({
       },
       interaction: { mode: 'nearest', axis: 'x', intersect: false },
     }),
-    [indicator],
+    [indicator, normalize, logScale],
   );
 
   if (loading) {
@@ -157,8 +174,8 @@ export default function ChartView({
           <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
-          <p>Configure your query and click <strong>Fetch Data</strong></p>
-          <span>Select an indicator, countries, and date range</span>
+          <p>Select an indicator and countries to get started</p>
+          <span>Data loads automatically as you change settings</span>
         </div>
       </div>
     );
@@ -178,7 +195,7 @@ export default function ChartView({
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           <p>No data available</p>
-          <span>The World Bank doesn't have data for the selected combination</span>
+          <span>The World Bank doesn't have data for this combination</span>
         </div>
       </div>
     );
@@ -186,14 +203,27 @@ export default function ChartView({
 
   const ChartComponent = chartType === 'bar' ? Bar : Line;
 
+  const badges = [];
+  if (normalize) badges.push('Indexed to 100');
+  if (logScale) badges.push('Log scale');
+
   return (
     <div className="chart-card">
       <div className="chart-card-header">
-        <div>
-          <h2 className="chart-title">{indicator.label}</h2>
-          <p className="chart-subtitle">
-            {indicator.description} &middot; {startYear}–{endYear} &middot; Source: World Bank
-          </p>
+        <div className="chart-card-title-row">
+          <div>
+            <h2 className="chart-title">{indicator.label}</h2>
+            <p className="chart-subtitle">
+              {indicator.description} · {startYear}–{endYear} · Source: World Bank
+            </p>
+          </div>
+          {badges.length > 0 && (
+            <div className="chart-badges">
+              {badges.map((b) => (
+                <span key={b} className="chart-badge">{b}</span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <div className="chart-container">

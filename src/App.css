@@ -722,3 +722,185 @@ body {
 .null-cell {
   color: var(--text-light) !important;
 }
+
+/* ── Searchable indicator picker ─────────────────────────────────── */
+.ind-picker {
+  position: relative;
+  outline: none;
+}
+
+.ind-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ind-input-wrap .form-input {
+  padding-right: 28px;
+  cursor: pointer;
+}
+
+.ind-input-wrap.open .form-input {
+  cursor: text;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  background: var(--surface);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.ind-chevron {
+  position: absolute;
+  right: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: transform 0.15s;
+}
+
+.ind-input-wrap.open .ind-chevron {
+  transform: rotate(180deg);
+}
+
+.ind-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-focus);
+  border-top: none;
+  border-bottom-left-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 50;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.ind-option {
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid var(--border);
+}
+
+.ind-option:last-child {
+  border-bottom: none;
+}
+
+.ind-option:hover {
+  background: var(--surface-alt);
+}
+
+.ind-option.active {
+  background: var(--primary-light);
+  color: var(--primary-text);
+  font-weight: 600;
+}
+
+.ind-option--empty {
+  color: var(--text-muted);
+  font-style: italic;
+  cursor: default;
+}
+
+/* ── Coverage tags ───────────────────────────────────────────────── */
+.coverage-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 100px;
+  background: #dcfce7;
+  color: #16a34a;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+
+.coverage-tag--low {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* ── Toggle rows (checkbox options) ─────────────────────────────── */
+.options-group {
+  margin-top: 12px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px 0;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+
+.toggle-row:last-child {
+  border-bottom: none;
+}
+
+.toggle-row input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.toggle-text span:first-child {
+  font-size: 13px;
+  color: var(--text-body);
+}
+
+.toggle-hint {
+  font-size: 11px;
+  color: var(--text-light) !important;
+  line-height: 1.4;
+}
+
+/* ── Auto-fetch hint ─────────────────────────────────────────────── */
+.auto-fetch-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* ── Chart header with badges ────────────────────────────────────── */
+.chart-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chart-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.chart-badge {
+  background: var(--primary-light);
+  color: var(--primary-text);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
