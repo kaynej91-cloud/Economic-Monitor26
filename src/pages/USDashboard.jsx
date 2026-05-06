@@ -179,6 +179,11 @@ function USTrendChart({ datasets, labels, metric, chartType, showYoY, loading })
 
 // ── Main Dashboard ─────────────────────────────────────────────────────────
 
+function currentYearMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
 export default function USDashboard() {
   const [apiKey, setApiKeyState] = useState(getFredApiKey());
   const [keyInput, setKeyInput] = useState('');
@@ -187,7 +192,7 @@ export default function USDashboard() {
   const [activeCategory, setActiveCategory] = useState('rates');
   const [selectedMetricId, setSelectedMetricId] = useState('FEDFUNDS');
   const [startDate, setStartDate] = useState('2015-01');
-  const [endDate, setEndDate] = useState('2025-01');
+  const [endDate, setEndDate] = useState(currentYearMonth());
   const [chartType, setChartType] = useState('line');
   const [showYoY, setShowYoY] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -227,7 +232,7 @@ export default function USDashboard() {
     await Promise.allSettled(
       KPI_SERIES.map(async (kpi) => {
         try {
-          results[kpi.id] = await fetchSeries(kpi.id, '2014-01-01', '2025-12-31');
+          results[kpi.id] = await fetchSeries(kpi.id, '2014-01-01', `${new Date().getFullYear() + 1}-12-31`);
         } catch { /* keep empty */ }
       }),
     );
@@ -470,7 +475,7 @@ export default function USDashboard() {
                     type="month"
                     className="form-input"
                     min={startDate}
-                    max="2025-12"
+                    max={currentYearMonth()}
                     value={endDate}
                     onChange={(e) => e.target.value && setEndDate(e.target.value)}
                   />
