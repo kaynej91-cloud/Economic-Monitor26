@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import ChartView from './components/ChartView';
 import DataTable from './components/DataTable';
+import USDashboard from './pages/USDashboard';
 import { fetchIndicatorData } from './api/worldbank';
 import { INDICATORS } from './constants/indicators';
 import { COUNTRIES } from './constants/countries';
@@ -14,7 +16,6 @@ const DEFAULTS = {
   chartType: 'line',
 };
 
-// Parse URL once on module load so useState initialisers only run once
 const INIT = (() => {
   const p = new URLSearchParams(window.location.search);
   const indId = p.get('i');
@@ -35,7 +36,7 @@ const INIT = (() => {
   };
 })();
 
-export default function App() {
+function GlobalDashboard() {
   const [indicator, setIndicator] = useState(INIT.indicator);
   const [selectedCountries, setSelectedCountries] = useState(INIT.countries);
   const [startYear, setStartYear] = useState(INIT.startYear);
@@ -68,7 +69,6 @@ export default function App() {
     }
   }, [indicator, selectedCountries, startYear, endYear]);
 
-  // Immediate fetch on mount; debounced auto-fetch on subsequent changes
   const isFirst = useRef(true);
   useEffect(() => {
     if (isFirst.current) {
@@ -81,7 +81,6 @@ export default function App() {
     return () => clearTimeout(t);
   }, [fetchData]);
 
-  // Keep URL in sync (only non-default values to stay clean)
   useEffect(() => {
     const p = new URLSearchParams();
     if (indicator.id !== DEFAULTS.indicator.id) p.set('i', indicator.id);
@@ -96,7 +95,6 @@ export default function App() {
     window.history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
   }, [indicator.id, selectedCountries, startYear, endYear, chartType, normalize, logScale]);
 
-  // Data-coverage percentage per country (used for badges in sidebar)
   const coverageMap = useMemo(() => {
     if (!data) return {};
     const total = endYear - startYear + 1;
@@ -125,9 +123,10 @@ export default function App() {
             <h1 className="header-title">Economic Monitor</h1>
           </div>
         </div>
-        <p className="header-tagline">
-          Global economic indicators · World Bank Open Data
-        </p>
+        <nav className="header-nav">
+          <Link to="/" className="nav-link nav-link--active">Global</Link>
+          <Link to="/us" className="nav-link">US</Link>
+        </nav>
       </header>
 
       <div className="app-body">
@@ -197,5 +196,14 @@ export default function App() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<GlobalDashboard />} />
+      <Route path="/us" element={<USDashboard />} />
+    </Routes>
   );
 }
