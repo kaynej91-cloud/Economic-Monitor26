@@ -17,6 +17,8 @@ export default function Sidebar({
   onChartTypeChange,
   onFetch,
   loading,
+  isOpen,
+  onClose,
 }) {
   const [search, setSearch] = useState('');
 
@@ -45,7 +47,8 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isOpen ? ' is-open' : ''}`}>
+      <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">✕</button>
       <div className="sidebar-section">
         <div className="form-group">
           <label className="form-label">Indicator</label>
@@ -167,7 +170,7 @@ export default function Sidebar({
       <div className="sidebar-footer">
         <button
           className="fetch-btn"
-          onClick={onFetch}
+          onClick={() => { onFetch(); onClose(); }}
           disabled={loading || selectedCountries.length === 0}
         >
           {loading ? (

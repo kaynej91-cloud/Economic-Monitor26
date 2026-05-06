@@ -23,6 +23,7 @@ export default function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (selectedCountries.length === 0) return;
@@ -52,9 +53,21 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="header-brand">
-          <span className="header-icon">📈</span>
-          <h1 className="header-title">Economic Monitor</h1>
+        <div className="header-left">
+          <button
+            className="hamburger-btn"
+            onClick={() => setSidebarOpen((o) => !o)}
+            aria-label="Toggle menu"
+            aria-expanded={sidebarOpen}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+          <div className="header-brand">
+            <span className="header-icon">📈</span>
+            <h1 className="header-title">Economic Monitor</h1>
+          </div>
         </div>
         <p className="header-tagline">
           Global economic indicators via World Bank Open Data
@@ -62,6 +75,13 @@ export default function App() {
       </header>
 
       <div className="app-body">
+        {sidebarOpen && (
+          <div
+            className="sidebar-overlay"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
         <Sidebar
           indicator={indicator}
           onIndicatorChange={setIndicator}
@@ -75,6 +95,8 @@ export default function App() {
           onChartTypeChange={setChartType}
           onFetch={fetchData}
           loading={loading}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
 
         <main className="main-content">
