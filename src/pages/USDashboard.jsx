@@ -179,9 +179,22 @@ function USTrendChart({ datasets, labels, metric, chartType, showYoY, loading })
 
 // ── Main Dashboard ─────────────────────────────────────────────────────────
 
-function currentYearMonth() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+function toYearMonth(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// Default end: 3 months ahead so FRED's latest published data is always within range
+function defaultEndDate() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 3);
+  return toYearMonth(d);
+}
+
+// Picker max: 18 months ahead so users can always reach freshly-published data
+function maxSelectableMonth() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 18);
+  return toYearMonth(d);
 }
 
 export default function USDashboard() {
@@ -192,7 +205,7 @@ export default function USDashboard() {
   const [activeCategory, setActiveCategory] = useState('rates');
   const [selectedMetricId, setSelectedMetricId] = useState('FEDFUNDS');
   const [startDate, setStartDate] = useState('2015-01');
-  const [endDate, setEndDate] = useState(currentYearMonth());
+  const [endDate, setEndDate] = useState(defaultEndDate());
   const [chartType, setChartType] = useState('line');
   const [showYoY, setShowYoY] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -329,7 +342,22 @@ export default function USDashboard() {
   };
 
   // ── Build main chart data ───────────────────────────────────────────────
-  const months = monthRange(startDate, endDate);
+  // Trim months to only those with at least some data across any loaded series,
+  // so future placeholder months don't produce blank trailing space.
+  function trimMonths(allMonths, ...obsMaps) {
+    const merged = obsMaps.filter(Boolean);
+    if (merged.length === 0) return allMonths;
+    const lastWithData = allMonths.reduceRight((found, m) => {
+      if (found) return found;
+      return merged.some((obs) => obs[m] != null) ? m : null;
+    }, null);
+    if (!lastWithData) return allMonths;
+    const idx = allMonths.indexOf(lastWithData);
+    return allMonths.slice(0, idx + 1);
+  }
+
+  const allMonths = monthRange(startDate, endDate);
+  const months = trimMonths(allMonths, mainObs, geoData?.national, geoData?.state, geoData?.county);
   const labels = months.map(fmtLabel);
 
   let displayObs = mainObs ?? {};
@@ -475,7 +503,7 @@ export default function USDashboard() {
                     type="month"
                     className="form-input"
                     min={startDate}
-                    max={currentYearMonth()}
+                    max={maxSelectableMonth()}
                     value={endDate}
                     onChange={(e) => e.target.value && setEndDate(e.target.value)}
                   />
