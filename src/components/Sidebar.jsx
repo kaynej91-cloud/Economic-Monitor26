@@ -104,7 +104,13 @@ export default function Sidebar({
                       setIndOpen(false);
                     }}
                   >
-                    {ind.label}
+                    <span>{ind.label}</span>
+                    {ind.coverage === 'limited' && (
+                      <span className="ind-coverage-tag ind-coverage-tag--limited">limited</span>
+                    )}
+                    {ind.coverage === 'partial' && (
+                      <span className="ind-coverage-tag ind-coverage-tag--partial">partial</span>
+                    )}
                   </div>
                 ))}
                 {filteredIndicators.length === 0 && (

@@ -14,6 +14,7 @@ import {
   Filler,
 } from 'chart.js';
 import { COUNTRIES } from '../constants/countries';
+import { INDICATORS } from '../constants/indicators';
 import { getChartValue, getRawFromChart, formatValue, getChartUnit, formatAxisTick } from '../utils/format';
 
 ChartJS.register(
@@ -207,6 +208,16 @@ export default function ChartView({
   if (normalize) badges.push('Indexed to 100');
   if (logScale) badges.push('Log scale');
 
+  // Countries that returned zero non-null values
+  const missingCountries = selectedCountries.filter(
+    (code) => !data[code] || Object.values(data[code]).every((v) => v === null),
+  );
+  const missingNames = missingCountries.map(
+    (code) => COUNTRIES.find((c) => c.code === code)?.name ?? code,
+  );
+
+  const indMeta = INDICATORS.find((i) => i.id === indicator.id);
+
   return (
     <div className="chart-card">
       <div className="chart-card-header">
@@ -225,6 +236,20 @@ export default function ChartView({
             </div>
           )}
         </div>
+
+        {missingNames.length > 0 && (
+          <div className="missing-data-notice">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>
+              No World Bank data for <strong>{missingNames.join(', ')}</strong>
+              {indMeta?.coverage === 'limited' && ' — this indicator has limited country coverage'}
+              {indMeta?.coverage === 'partial' && ' — this indicator may have reporting gaps'}
+            </span>
+          </div>
+        )}
       </div>
       <div className="chart-container">
         <ChartComponent data={chartData} options={options} />
