@@ -1,4 +1,4 @@
-const FRED_BASE = 'https://api.stlouisfed.org/fred';
+const PROXY = '/api/fred';
 
 export function getFredApiKey() {
   return localStorage.getItem('fred_api_key') ?? '';
@@ -20,7 +20,8 @@ export async function fetchSeries(seriesId, startDate, endDate) {
   const cached = sessionStorage.getItem(cacheKey);
   if (cached) return JSON.parse(cached);
 
-  const url = new URL(`${FRED_BASE}/series/observations`);
+  const url = new URL(PROXY, window.location.origin);
+  url.searchParams.set('path', 'series/observations');
   url.searchParams.set('series_id', seriesId);
   url.searchParams.set('observation_start', startDate);
   url.searchParams.set('observation_end', endDate);
@@ -44,41 +45,6 @@ export async function fetchSeries(seriesId, startDate, endDate) {
     }
   }
 
-  sessionStorage.setItem(cacheKey, JSON.stringify(result));
-  return result;
-}
-
-export async function searchCountySeries(countyName, stateName) {
-  const apiKey = getFredApiKey();
-  if (!apiKey) throw new Error('FRED_NO_KEY');
-
-  const query = `${countyName} ${stateName} Unemployment Rate`;
-  const cacheKey = ck('search', query);
-  const cached = sessionStorage.getItem(cacheKey);
-  if (cached) return JSON.parse(cached);
-
-  const url = new URL(`${FRED_BASE}/series/search`);
-  url.searchParams.set('search_text', query);
-  url.searchParams.set('search_type', 'full_text');
-  url.searchParams.set('limit', '10');
-  url.searchParams.set('order_by', 'search_rank');
-  url.searchParams.set('filter_variable', 'frequency');
-  url.searchParams.set('filter_value', 'Monthly');
-  url.searchParams.set('file_type', 'json');
-  url.searchParams.set('api_key', apiKey);
-
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`FRED search error ${res.status}`);
-  const json = await res.json();
-
-  // Find best match — prefer series with "Unemployment Rate" in title and monthly frequency
-  const series = (json.seriess ?? []).find(
-    (s) =>
-      s.title.toLowerCase().includes('unemployment') &&
-      s.title.toLowerCase().includes(countyName.toLowerCase().replace(' county', ''))
-  );
-
-  const result = series ?? null;
   sessionStorage.setItem(cacheKey, JSON.stringify(result));
   return result;
 }

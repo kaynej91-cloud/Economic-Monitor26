@@ -3,7 +3,7 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import ChartView from './components/ChartView';
 import DataTable from './components/DataTable';
-import USDashboard from './pages/USDashboard';
+import JobsDashboard from './pages/JobsDashboard';
 import { fetchIndicatorData } from './api/worldbank';
 import { INDICATORS } from './constants/indicators';
 import { COUNTRIES } from './constants/countries';
@@ -125,7 +125,7 @@ function GlobalDashboard() {
         </div>
         <nav className="header-nav">
           <Link to="/" className="nav-link nav-link--active">Global</Link>
-          <Link to="/us" className="nav-link">US</Link>
+          <Link to="/us" className="nav-link">US Jobs</Link>
         </nav>
       </header>
 
@@ -203,7 +203,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<GlobalDashboard />} />
-      <Route path="/us" element={<USDashboard />} />
+      <Route path="/us" element={<JobsDashboard />} />
     </Routes>
   );
 }
