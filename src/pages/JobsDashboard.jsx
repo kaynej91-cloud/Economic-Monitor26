@@ -26,6 +26,8 @@ const PALETTE = [
   { border: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
   { border: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
   { border: '#06b6d4', bg: 'rgba(6,182,212,0.12)' },
+  { border: '#f97316', bg: 'rgba(249,115,22,0.12)' },
+  { border: '#ec4899', bg: 'rgba(236,72,153,0.12)' },
 ];
 
 // ── Date helpers ──────────────────────────────────────────────────────────
@@ -36,6 +38,11 @@ function toYM(date) {
 function futureYM(months) {
   const d = new Date();
   d.setMonth(d.getMonth() + months);
+  return toYM(d);
+}
+function pastYM(months) {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
   return toYM(d);
 }
 function monthRange(start, end) {
@@ -136,7 +143,7 @@ function JobsChart({ allObs, selected, view, months, chartType, showYoY, showMoM
   }).filter(Boolean);
 
   if (!datasets.length) return (
-    <div className="chart-state" style={{ height: 340 }}>
+    <div className="chart-state" style={{ height: 440 }}>
       <p>Select at least one metric to display</p>
     </div>
   );
@@ -198,7 +205,7 @@ function JobsChart({ allObs, selected, view, months, chartType, showYoY, showMoM
 
   const ChartComp = chartType === 'bar' ? Bar : Line;
   return (
-    <div style={{ height: 360, position: 'relative' }}>
+    <div style={{ height: 440, position: 'relative' }}>
       <ChartComp data={{ labels, datasets }} options={options} />
     </div>
   );
@@ -217,6 +224,7 @@ export default function JobsDashboard() {
     payrolls:     ['PAYEMS', 'USFIRE', 'USCONS', 'MANEMP'],
     wages:        ['CES0500000003', 'CES5500000003'],
     jolts:        ['JTSJOL', 'JTSHIL', 'JTSQUL', 'JTSLDL'],
+    claims:       ['IC4WSA', 'CCSA'],
   });
   const [showYoY, setShowYoY] = useState(false);
   const [showMoM, setShowMoM] = useState(false);
@@ -253,11 +261,11 @@ export default function JobsDashboard() {
     }
   }, [apiKey, allObs, startDate]);
 
-  // Fetch KPI series on mount / key change
+  // Fetch KPI series on mount / key change — only last 26 months (enough for YoY + MoM)
   useEffect(() => {
     if (!apiKey) return;
     KPI_SERIES.forEach(k => {
-      fetchSeries(k.id, `${startDate}-01`, `${futureYM(6)}-01`)
+      fetchSeries(k.id, `${pastYM(26)}-01`, `${futureYM(6)}-01`)
         .then(data => setKpiObs(prev => ({ ...prev, [k.id]: data })))
         .catch(() => {});
     });
@@ -301,7 +309,7 @@ export default function JobsDashboard() {
     const cur = selected[activeViewId] ?? [];
     const next = cur.includes(id)
       ? cur.filter(s => s !== id)
-      : cur.length >= 6 ? cur : [...cur, id];
+      : cur.length >= 8 ? cur : [...cur, id];
     if (next.length === 0) return;
     setSelected(prev => ({ ...prev, [activeViewId]: next }));
     if (!allObs[id]) fetchOne(id);
@@ -378,12 +386,12 @@ export default function JobsDashboard() {
           <div className="sidebar-section">
             <label className="form-label">
               Metrics
-              <span className="badge">{activeSelected.length}/6</span>
+              <span className="badge">{activeSelected.length}/8</span>
             </label>
             <div className="metric-list">
               {activeView.metrics.map(m => {
                 const checked = activeSelected.includes(m.id);
-                const disabled = !checked && activeSelected.length >= 6;
+                const disabled = !checked && activeSelected.length >= 8;
                 return (
                   <label key={m.id} className={`metric-item${disabled ? ' disabled' : ''}`}>
                     <input
@@ -560,12 +568,12 @@ export default function JobsDashboard() {
             </div>
 
             {anyLoading && !obsForActive.length ? (
-              <div className="chart-state" style={{ height: 360 }}>
+              <div className="chart-state" style={{ height: 440 }}>
                 <div className="spinner" />
                 <p>Fetching FRED data…</p>
               </div>
             ) : (
-              <div className="chart-container" style={{ height: 360 }}>
+              <div className="chart-container" style={{ height: 440 }}>
                 <JobsChart
                   allObs={allObs}
                   selected={activeSelected}
