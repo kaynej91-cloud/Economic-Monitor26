@@ -1,0 +1,115 @@
+/* Map wrapper ---------------------------------------------------------------- */
+
+.energy-map-wrap {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.energy-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.energy-map-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.energy-map-year {
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748b;
+}
+
+.energy-map-unit {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border-radius: 5px;
+  padding: 2px 8px;
+}
+
+.energy-map-container {
+  position: relative;
+  height: 340px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.energy-map-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.map-legend-gradient {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(to right,
+    #f7fbff, #deebf7, #c6dbef, #9ecae1, #6baed6,
+    #4292c6, #2171b5, #08519c, #08306b
+  );
+}
+
+/* Map tooltip --------------------------------------------------------------- */
+
+.map-tooltip {
+  position: fixed;
+  background: rgba(15,23,42,0.93);
+  color: #fff;
+  border-radius: 8px;
+  padding: 7px 12px;
+  pointer-events: none;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.map-tooltip strong { font-size: 13px; font-weight: 600; }
+.map-tooltip span   { font-size: 12px; color: #94a3b8; }
+
+/* Energy source dot --------------------------------------------------------- */
+
+.metric-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Unit info icon ------------------------------------------------------------ */
+
+.energy-unit-info {
+  font-size: 13px;
+  color: #94a3b8;
+  cursor: help;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+.energy-unit-info:hover { color: #64748b; }
+
+/* Responsive ---------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .energy-map-container { height: 220px; }
+}
+
+@media (max-width: 600px) {
+  .energy-map-container { height: 180px; }
+  .energy-map-title { font-size: 12px; }
+}
