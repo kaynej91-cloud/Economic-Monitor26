@@ -4,6 +4,8 @@ import Sidebar from './components/Sidebar';
 import ChartView from './components/ChartView';
 import DataTable from './components/DataTable';
 import JobsDashboard from './pages/JobsDashboard';
+import EnergyDashboard from './pages/EnergyDashboard';
+import InflationDashboard from './pages/InflationDashboard';
 import { fetchIndicatorData } from './api/worldbank';
 import { INDICATORS } from './constants/indicators';
 import { COUNTRIES } from './constants/countries';
@@ -126,6 +128,8 @@ function GlobalDashboard() {
         <nav className="header-nav">
           <Link to="/" className="nav-link nav-link--active">Global</Link>
           <Link to="/us" className="nav-link">US Jobs</Link>
+          <Link to="/energy" className="nav-link">Energy</Link>
+          <Link to="/inflation" className="nav-link">Inflation</Link>
         </nav>
       </header>
 
@@ -204,6 +208,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<GlobalDashboard />} />
       <Route path="/us" element={<JobsDashboard />} />
+      <Route path="/energy" element={<EnergyDashboard />} />
+      <Route path="/inflation" element={<InflationDashboard />} />
     </Routes>
   );
 }
