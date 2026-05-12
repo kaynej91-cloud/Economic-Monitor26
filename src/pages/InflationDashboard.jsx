@@ -8,11 +8,10 @@ import {
 } from 'chart.js';
 import { fetchSeries, getFredApiKey, setFredApiKey } from '../api/fred';
 import {
-  KPI_SERIES, VIEWS,
-  applyYoY, applyMoM,
-  formatKpiValue, formatAxisValue, formatTooltipValue, latestValue,
-} from '../constants/jobsMetrics';
-import './JobsDashboard.css';
+  CPI_CATEGORIES, CPI_GROUPS, KPI_CATEGORIES, DEFAULT_SELECTED, DISPLAY_MODES,
+  applyMoM, applyYoY, applyCumulative, latestValue, seriesId,
+} from '../constants/inflationMetrics';
+import './InflationDashboard.css';
 
 ChartJS.register(
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -32,18 +31,14 @@ const PALETTE = [
 
 // ── Date helpers ──────────────────────────────────────────────────────────
 
-function toYM(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+function toYM(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 function futureYM(months) {
-  const d = new Date();
-  d.setMonth(d.getMonth() + months);
-  return toYM(d);
+  const d = new Date(); d.setMonth(d.getMonth() + months); return toYM(d);
 }
 function pastYM(months) {
-  const d = new Date();
-  d.setMonth(d.getMonth() - months);
-  return toYM(d);
+  const d = new Date(); d.setMonth(d.getMonth() - months); return toYM(d);
 }
 function monthRange(start, end) {
   const months = [];
@@ -69,32 +64,36 @@ function trimTrailingEmpty(months, ...obsMaps) {
   return months.slice(0, months.indexOf(last) + 1);
 }
 
+function findCat(id) { return CPI_CATEGORIES.find(c => c.id === id); }
+
 // ── KPI card ──────────────────────────────────────────────────────────────
 
-function KpiCard({ kpi, obs, loading }) {
-  if (loading && !obs) return (
+function KpiCard({ catId, adjustment, kpiObs, loading }) {
+  const cat = findCat(catId);
+  const sid = seriesId(cat, adjustment);
+  const raw = kpiObs[sid];
+  const label = KPI_CATEGORIES.find(k => k.id === catId)?.label ?? cat.label;
+
+  if (loading && !raw) return (
     <div className="kpi-card">
-      <span className="kpi-label">{kpi.label}</span>
+      <span className="kpi-label">{label}</span>
       <div className="kpi-skeleton" />
+      <span className="kpi-date">YoY %</span>
     </div>
   );
 
-  const transformed = !obs ? null
-    : kpi.transform === 'yoy' ? applyYoY(obs)
-    : kpi.transform === 'mom' ? applyMoM(obs)
-    : obs;
-  const latest = transformed ? latestValue(transformed) : null;
-  const display = latest ? formatKpiValue(latest.value, kpi) : '—';
+  const yoyObs = raw ? applyYoY(raw) : null;
+  const latest = yoyObs ? latestValue(yoyObs) : null;
 
   let trendEl = null;
-  if (latest && transformed) {
-    const keys = Object.keys(transformed).sort();
+  if (latest && yoyObs) {
+    const keys = Object.keys(yoyObs).sort();
     const idx = keys.indexOf(latest.date);
     if (idx > 0) {
-      const prev = transformed[keys[idx - 1]];
+      const prev = yoyObs[keys[idx - 1]];
       if (prev != null) {
         const delta = latest.value - prev;
-        const dir = delta > 0.005 ? 'up' : delta < -0.005 ? 'down' : 'flat';
+        const dir = delta > 0.05 ? 'up' : delta < -0.05 ? 'down' : 'flat';
         trendEl = (
           <span className={`kpi-trend kpi-trend--${dir}`}>
             {dir === 'up' ? '▲' : dir === 'down' ? '▼' : '—'}
@@ -106,33 +105,40 @@ function KpiCard({ kpi, obs, loading }) {
 
   return (
     <div className="kpi-card">
-      <span className="kpi-label">{kpi.label}</span>
+      <span className="kpi-label">{label}</span>
       <div className="kpi-value-row">
-        <span className="kpi-value">{display}</span>
+        <span className="kpi-value">{latest ? `${latest.value.toFixed(1)}%` : '—'}</span>
         {trendEl}
       </div>
-      {latest && <span className="kpi-date">{latest.date}</span>}
+      {latest
+        ? <span className="kpi-date">{latest.date} · YoY</span>
+        : <span className="kpi-date">YoY %</span>}
     </div>
   );
 }
 
-// ── Main chart ────────────────────────────────────────────────────────────
+// ── Inflation chart ───────────────────────────────────────────────────────
 
-function JobsChart({ allObs, selected, view, months, chartType, showYoY, showMoM }) {
-  const labels = months.map(fmtLabel);
+function InflationChart({ allObs, selected, adjustment, displayMode, refDate, months, chartType }) {
+  const datasets = selected.map((catId, i) => {
+    const cat = findCat(catId);
+    if (!cat) return null;
+    const sid = seriesId(cat, adjustment);
+    const raw = allObs[sid];
+    if (!raw) return null;
 
-  const datasets = selected.map((id, i) => {
-    const metric = view.metrics.find(m => m.id === id);
-    if (!metric || !allObs[id]) return null;
-    const raw = allObs[id];
-    const obs = showYoY ? applyYoY(raw) : showMoM ? applyMoM(raw) : raw;
+    let obs;
+    if (displayMode === 'mom')        obs = applyMoM(raw);
+    else if (displayMode === 'yoy')   obs = applyYoY(raw);
+    else if (displayMode === 'cumulative') obs = applyCumulative(raw, refDate);
+    else                              obs = raw;
+
     const color = PALETTE[i % PALETTE.length];
     return {
-      label: metric.label,
+      label: cat.label,
       data: months.map(m => obs[m] ?? null),
       borderColor: color.border,
-      backgroundColor: chartType === 'bar' ? color.border + 'bb'
-        : chartType === 'area' ? color.bg : color.bg,
+      backgroundColor: chartType === 'bar' ? color.border + 'bb' : color.bg,
       fill: chartType === 'area' ? 'origin' : false,
       tension: 0.3,
       pointRadius: months.length > 80 ? 0 : months.length > 40 ? 2 : 3,
@@ -144,12 +150,16 @@ function JobsChart({ allObs, selected, view, months, chartType, showYoY, showMoM
 
   if (!datasets.length) return (
     <div className="chart-state" style={{ height: 440 }}>
-      <p>Select at least one metric to display</p>
+      <p>Select at least one category to display</p>
     </div>
   );
 
-  const firstMetric = view.metrics.find(m => m.id === selected[0]);
-  const unit = firstMetric?.unit ?? '';
+  const isPercent = displayMode !== 'level';
+  const yAxisLabel =
+    displayMode === 'yoy'        ? 'YoY Change (%)' :
+    displayMode === 'mom'        ? 'MoM Change (%)' :
+    displayMode === 'cumulative' ? `Cumulative Change from ${refDate} (%)` :
+                                   'CPI Index (1982–84 = 100)';
 
   const options = {
     responsive: true,
@@ -170,8 +180,10 @@ function JobsChart({ allObs, selected, view, months, chartType, showYoY, showMoM
           label: ctx => {
             const v = ctx.parsed.y;
             if (v == null) return `  ${ctx.dataset.label}: —`;
-            const metric = view.metrics.find(m => m.label === ctx.dataset.label);
-            return `  ${ctx.dataset.label}: ${formatTooltipValue(v, metric, showYoY, showMoM)}`;
+            const fmt = isPercent
+              ? `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`
+              : v.toFixed(1);
+            return `  ${ctx.dataset.label}: ${fmt}`;
           },
         },
       },
@@ -186,15 +198,10 @@ function JobsChart({ allObs, selected, view, months, chartType, showYoY, showMoM
         grid: { color: 'rgba(0,0,0,0.04)' },
         ticks: {
           font: { size: 11 }, color: '#64748b',
-          callback: v => formatAxisValue(v, unit, showYoY || showMoM),
+          callback: v => isPercent ? `${v.toFixed(1)}%` : v.toFixed(0),
         },
         title: {
-          display: true,
-          text: showYoY ? 'YoY Change (%)'
-            : showMoM ? 'MoM Change (thousands)'
-            : unit === '$' ? 'Avg Hourly Earnings ($/hr)'
-            : unit === '%' ? '(%)'
-            : 'Employees (thousands)',
+          display: true, text: yAxisLabel,
           font: { size: 11 }, color: '#94a3b8',
         },
         border: { color: '#e2e8f0' },
@@ -206,113 +213,99 @@ function JobsChart({ allObs, selected, view, months, chartType, showYoY, showMoM
   const ChartComp = chartType === 'bar' ? Bar : Line;
   return (
     <div style={{ height: 440, position: 'relative' }}>
-      <ChartComp data={{ labels, datasets }} options={options} />
+      <ChartComp data={{ labels: months.map(fmtLabel), datasets }} options={options} />
     </div>
   );
 }
 
 // ── Main component ────────────────────────────────────────────────────────
 
-export default function JobsDashboard() {
+export default function InflationDashboard() {
   const [apiKey, setApiKeyState] = useState(getFredApiKey());
   const [keyInput, setKeyInput] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [activeViewId, setActiveViewId] = useState('unemployment');
-  const [selected, setSelected] = useState({
-    unemployment: ['UNRATE', 'U6RATE'],
-    payrolls:     ['PAYEMS', 'USFIRE', 'USCONS', 'MANEMP'],
-    wages:        ['CES0500000003', 'CES5500000003'],
-    jolts:        ['JTSJOL', 'JTSHIL', 'JTSQUL', 'JTSLDL'],
-    claims:       ['IC4WSA', 'CCSA'],
-  });
-  const [showYoY, setShowYoY] = useState(false);
-  const [showMoM, setShowMoM] = useState(false);
+  const [displayMode, setDisplayMode] = useState('yoy');
+  const [adjustment, setAdjustment] = useState('sa');
+  const [refDate, setRefDate] = useState('2020-01');
+  const [selected, setSelected] = useState(DEFAULT_SELECTED);
   const [chartType, setChartType] = useState('line');
-  const [startDate, setStartDate] = useState('2008-01');
+  const [startDate, setStartDate] = useState('2000-01');
   const [endDate, setEndDate] = useState(futureYM(3));
 
-  // data cache: { [seriesId]: { [YYYY-MM]: value } }
   const [allObs, setAllObs] = useState({});
   const [loading, setLoading] = useState({});
   const [errors, setErrors] = useState({});
   const [kpiObs, setKpiObs] = useState({});
 
-  const activeView = VIEWS.find(v => v.id === activeViewId);
-  const activeSelected = selected[activeViewId] ?? [];
-
   // ── Fetch helpers ────────────────────────────────────────────────────────
 
-  const fetchOne = useCallback(async (seriesId) => {
+  const fetchOne = useCallback(async (sid) => {
     if (!apiKey) return;
-    if (allObs[seriesId]) return; // already loaded
-    setLoading(prev => ({ ...prev, [seriesId]: true }));
-    setErrors(prev => { const n = { ...prev }; delete n[seriesId]; return n; });
+    if (allObs[sid]) return;
+    setLoading(prev => ({ ...prev, [sid]: true }));
+    setErrors(prev => { const n = { ...prev }; delete n[sid]; return n; });
     try {
-      const data = await fetchSeries(seriesId, `${startDate}-01`, `${futureYM(6)}-01`);
-      setAllObs(prev => ({ ...prev, [seriesId]: data }));
+      const data = await fetchSeries(sid, `${startDate}-01`, `${futureYM(6)}-01`);
+      setAllObs(prev => ({ ...prev, [sid]: data }));
     } catch (err) {
       const msg = err.message === 'FRED_BAD_KEY' ? 'Invalid API key'
         : err.message === 'FRED_NO_KEY' ? 'API key required'
         : err.message;
-      setErrors(prev => ({ ...prev, [seriesId]: msg }));
+      setErrors(prev => ({ ...prev, [sid]: msg }));
     } finally {
-      setLoading(prev => { const n = { ...prev }; delete n[seriesId]; return n; });
+      setLoading(prev => { const n = { ...prev }; delete n[sid]; return n; });
     }
   }, [apiKey, allObs, startDate]);
 
-  // Fetch KPI series on mount / key change — only last 26 months (enough for YoY + MoM)
+  // Fetch KPI series (last 26 months, enough for YoY)
   useEffect(() => {
     if (!apiKey) return;
-    KPI_SERIES.forEach(k => {
-      fetchSeries(k.id, `${pastYM(26)}-01`, `${futureYM(6)}-01`)
-        .then(data => setKpiObs(prev => ({ ...prev, [k.id]: data })))
+    KPI_CATEGORIES.forEach(k => {
+      const cat = findCat(k.id);
+      const sid = seriesId(cat, adjustment);
+      fetchSeries(sid, `${pastYM(26)}-01`, `${futureYM(6)}-01`)
+        .then(data => setKpiObs(prev => ({ ...prev, [sid]: data })))
         .catch(() => {});
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiKey]);
+  }, [apiKey, adjustment]);
 
-  // Fetch series needed for the active view when selection changes
-  const prevRef = useRef([]);
+  // Fetch selected series when selection or adjustment changes
   useEffect(() => {
-    activeSelected.forEach(id => {
-      if (!allObs[id] && !loading[id]) fetchOne(id);
+    selected.forEach(catId => {
+      const cat = findCat(catId);
+      if (!cat) return;
+      const sid = seriesId(cat, adjustment);
+      if (!allObs[sid] && !loading[sid]) fetchOne(sid);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSelected.join(','), apiKey]);
+  }, [selected.join(','), adjustment, apiKey]);
 
-  // When date range changes, clear cache so data re-fetches
-  const prevDates = useRef({ startDate, endDate });
+  // Clear cache when start date changes
+  const prevStart = useRef(startDate);
   useEffect(() => {
-    if (prevDates.current.startDate !== startDate) {
+    if (prevStart.current !== startDate) {
       setAllObs({});
       setKpiObs({});
-      prevDates.current = { startDate, endDate };
+      prevStart.current = startDate;
     }
-  }, [startDate, endDate]);
+  }, [startDate]);
 
-  // ── View / metric toggle ─────────────────────────────────────────────────
+  // ── Category toggle ──────────────────────────────────────────────────────
 
-  const switchView = (id) => {
-    setActiveViewId(id);
-    setShowYoY(false);
-    setShowMoM(false);
-    const view = VIEWS.find(v => v.id === id);
-    view.metrics.forEach(m => {
-      if ((selected[id] ?? view.defaultSelected).includes(m.id) && !allObs[m.id]) {
-        fetchOne(m.id);
+  const toggleCategory = (catId) => {
+    setSelected(prev => {
+      if (prev.includes(catId)) {
+        if (prev.length === 1) return prev;
+        return prev.filter(id => id !== catId);
       }
+      if (prev.length >= 8) return prev;
+      const cat = findCat(catId);
+      const sid = seriesId(cat, adjustment);
+      if (!allObs[sid]) fetchOne(sid);
+      return [...prev, catId];
     });
-  };
-
-  const toggleMetric = (id) => {
-    const cur = selected[activeViewId] ?? [];
-    const next = cur.includes(id)
-      ? cur.filter(s => s !== id)
-      : cur.length >= 8 ? cur : [...cur, id];
-    if (next.length === 0) return;
-    setSelected(prev => ({ ...prev, [activeViewId]: next }));
-    if (!allObs[id]) fetchOne(id);
   };
 
   const saveKey = () => {
@@ -327,33 +320,39 @@ export default function JobsDashboard() {
   // ── Build chart months ───────────────────────────────────────────────────
 
   const allMonths = monthRange(startDate, endDate);
-  const obsForActive = activeSelected.map(id => allObs[id]).filter(Boolean);
-  const months = trimTrailingEmpty(allMonths, ...obsForActive);
+  const selectedObs = selected
+    .map(id => { const cat = findCat(id); return cat ? allObs[seriesId(cat, adjustment)] : null; })
+    .filter(Boolean);
+  const months = trimTrailingEmpty(allMonths, ...selectedObs);
 
-  // Primary error (from selected series)
-  const primaryError = activeSelected.map(id => errors[id]).find(Boolean);
-  const anyLoading = activeSelected.some(id => loading[id]);
+  const anyLoading = selected.some(id => {
+    const cat = findCat(id);
+    return cat && loading[seriesId(cat, adjustment)];
+  });
+  const primaryError = selected
+    .map(id => { const cat = findCat(id); return cat ? errors[seriesId(cat, adjustment)] : null; })
+    .find(Boolean);
+
+  const modeBadge = DISPLAY_MODES.find(m => m.id === displayMode)?.label ?? '';
 
   return (
     <div className="app">
       <header className="app-header">
         <div className="header-left">
-          <button
-            className="hamburger-btn"
-            onClick={() => setSidebarOpen(o => !o)}
-            aria-label="Toggle menu"
-            aria-expanded={sidebarOpen}
-          ><span /><span /><span /></button>
+          <button className="hamburger-btn" onClick={() => setSidebarOpen(o => !o)}
+            aria-label="Toggle menu" aria-expanded={sidebarOpen}>
+            <span /><span /><span />
+          </button>
           <div className="header-brand">
-            <span className="header-icon">💼</span>
-            <h1 className="header-title">US Labor Market</h1>
+            <span className="header-icon">📊</span>
+            <h1 className="header-title">US Inflation (CPI)</h1>
           </div>
         </div>
         <nav className="header-nav">
           <Link to="/" className="nav-link">Global</Link>
-          <Link to="/us" className="nav-link nav-link--active">US Jobs</Link>
+          <Link to="/us" className="nav-link">US Jobs</Link>
           <Link to="/energy" className="nav-link">Energy</Link>
-          <Link to="/inflation" className="nav-link">Inflation</Link>
+          <Link to="/inflation" className="nav-link nav-link--active">Inflation</Link>
         </nav>
       </header>
 
@@ -366,83 +365,89 @@ export default function JobsDashboard() {
         <aside className={`sidebar${sidebarOpen ? ' is-open' : ''}`}>
           <button className="sidebar-close-btn" onClick={() => setSidebarOpen(false)} aria-label="Close">✕</button>
 
-          {/* View tabs */}
+          {/* Display mode */}
           <div className="sidebar-section">
-            <label className="form-label">View</label>
+            <label className="form-label">Display Mode</label>
             <div className="us-cat-tabs">
-              {VIEWS.map(v => (
-                <button
-                  key={v.id}
-                  className={`us-cat-tab${activeViewId === v.id ? ' active' : ''}`}
-                  onClick={() => { switchView(v.id); setSidebarOpen(false); }}
-                >
-                  {v.label}
+              {DISPLAY_MODES.map(m => (
+                <button key={m.id}
+                  className={`us-cat-tab infl-mode-tab${displayMode === m.id ? ' active' : ''}`}
+                  onClick={() => setDisplayMode(m.id)}>
+                  <span className="tab-mode-label">{m.label}</span>
+                  <span className="tab-hint">{m.hint}</span>
                 </button>
               ))}
             </div>
           </div>
 
+          {/* Reference date — cumulative mode only */}
+          {displayMode === 'cumulative' && (
+            <>
+              <div className="sidebar-divider" />
+              <div className="sidebar-section">
+                <div className="form-group">
+                  <label className="form-label">Reference Date</label>
+                  <input type="month" className="form-input"
+                    min={startDate} max={endDate} value={refDate}
+                    onChange={e => e.target.value && setRefDate(e.target.value)} />
+                  <p className="form-hint">Cumulative % is measured from this month (= 0%)</p>
+                </div>
+              </div>
+            </>
+          )}
+
           <div className="sidebar-divider" />
 
-          {/* Metric selector */}
+          {/* SA / NSA toggle */}
+          <div className="sidebar-section">
+            <label className="form-label">Seasonal Adjustment</label>
+            <div className="sa-toggle-row">
+              <button className={`sa-btn${adjustment === 'sa' ? ' active' : ''}`}
+                onClick={() => setAdjustment('sa')}>SA</button>
+              <button className={`sa-btn${adjustment === 'nsa' ? ' active' : ''}`}
+                onClick={() => setAdjustment('nsa')}>NSA</button>
+            </div>
+            <p className="form-hint">
+              {adjustment === 'sa'
+                ? 'Seasonally adjusted — removes recurring seasonal patterns'
+                : 'Not seasonally adjusted — raw reported values'}
+            </p>
+          </div>
+
+          <div className="sidebar-divider" />
+
+          {/* Categories */}
           <div className="sidebar-section">
             <label className="form-label">
-              Metrics
-              <span className="badge">{activeSelected.length}/8</span>
+              Categories
+              <span className="badge">{selected.length}/8</span>
             </label>
             <div className="metric-list">
-              {activeView.metrics.map(m => {
-                const checked = activeSelected.includes(m.id);
-                const disabled = !checked && activeSelected.length >= 8;
+              {CPI_GROUPS.map(group => {
+                const cats = CPI_CATEGORIES.filter(c => c.group === group.id);
                 return (
-                  <label key={m.id} className={`metric-item${disabled ? ' disabled' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={disabled}
-                      onChange={() => toggleMetric(m.id)}
-                    />
-                    <span className="metric-name">{m.label}</span>
-                    {loading[m.id] && <span className="metric-spinner" />}
-                  </label>
+                  <div key={group.id} className="cat-group">
+                    <div className="cat-group-label">{group.label}</div>
+                    {cats.map(cat => {
+                      const checked = selected.includes(cat.id);
+                      const disabled = !checked && selected.length >= 8;
+                      const sid = seriesId(cat, adjustment);
+                      return (
+                        <label key={cat.id} className={`metric-item${disabled ? ' disabled' : ''}`}>
+                          <input type="checkbox" checked={checked} disabled={disabled}
+                            onChange={() => toggleCategory(cat.id)} />
+                          <span className="metric-name">{cat.label}</span>
+                          {loading[sid] && <span className="metric-spinner" />}
+                        </label>
+                      );
+                    })}
+                  </div>
                 );
               })}
             </div>
           </div>
 
           <div className="sidebar-divider" />
-
-          {/* Transforms */}
-          {(activeView.yoyToggle || activeView.momToggle) && (
-            <>
-              <div className="sidebar-section">
-                <div className="form-group options-group">
-                  <label className="form-label">Display</label>
-                  {activeView.yoyToggle && (
-                    <label className="toggle-row">
-                      <input type="checkbox" checked={showYoY}
-                        onChange={e => { setShowYoY(e.target.checked); setShowMoM(false); }} />
-                      <div className="toggle-text">
-                        <span>Year-over-Year change</span>
-                        <span className="toggle-hint">% change vs. same month prior year</span>
-                      </div>
-                    </label>
-                  )}
-                  {activeView.momToggle && (
-                    <label className="toggle-row">
-                      <input type="checkbox" checked={showMoM}
-                        onChange={e => { setShowMoM(e.target.checked); setShowYoY(false); }} />
-                      <div className="toggle-text">
-                        <span>Month-over-month change</span>
-                        <span className="toggle-hint">Net jobs added / lost each month</span>
-                      </div>
-                    </label>
-                  )}
-                </div>
-              </div>
-              <div className="sidebar-divider" />
-            </>
-          )}
 
           {/* Chart type */}
           <div className="sidebar-section">
@@ -452,8 +457,7 @@ export default function JobsDashboard() {
                 {['line', 'bar', 'area'].map(type => (
                   <button key={type}
                     className={`chart-type-btn${chartType === type ? ' active' : ''}`}
-                    onClick={() => setChartType(type)}
-                  >
+                    onClick={() => setChartType(type)}>
                     {type === 'line' && '〜 '}{type === 'bar' && '▌ '}{type === 'area' && '▿ '}
                     {type.charAt(0).toUpperCase() + type.slice(1)}
                   </button>
@@ -472,7 +476,7 @@ export default function JobsDashboard() {
                 <div className="date-field">
                   <span className="date-field-label">From</span>
                   <input type="month" className="form-input"
-                    min="2000-01" max={endDate} value={startDate}
+                    min="1947-01" max={endDate} value={startDate}
                     onChange={e => e.target.value && setStartDate(e.target.value)} />
                 </div>
                 <div className="date-field">
@@ -519,7 +523,6 @@ export default function JobsDashboard() {
 
         {/* ── Main content ─────────────────────────────────────────────── */}
         <main className="main-content">
-
           {!apiKey && (
             <div className="us-key-banner">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -536,23 +539,35 @@ export default function JobsDashboard() {
 
           {/* KPI grid */}
           <div className="kpi-grid">
-            {KPI_SERIES.map(kpi => (
-              <KpiCard key={kpi.id} kpi={kpi} obs={kpiObs[kpi.id]} loading={!kpiObs[kpi.id] && !!apiKey} />
+            {KPI_CATEGORIES.map(k => (
+              <KpiCard key={k.id}
+                catId={k.id}
+                adjustment={adjustment}
+                kpiObs={kpiObs}
+                loading={!kpiObs[seriesId(findCat(k.id), adjustment)] && !!apiKey} />
             ))}
           </div>
 
-          {/* Main chart card */}
+          {/* Chart card */}
           <div className="chart-card">
             <div className="chart-card-header">
               <div className="chart-card-title-row">
                 <div>
                   <h2 className="chart-title">
-                    {activeView.label}
-                    {showYoY && <span className="chart-badge" style={{ marginLeft: 8 }}>YoY %</span>}
-                    {showMoM && <span className="chart-badge" style={{ marginLeft: 8 }}>MoM Change</span>}
+                    Consumer Price Index (CPI)
+                    <span className="chart-badge" style={{ marginLeft: 8 }}>{modeBadge}</span>
+                    <span className="chart-badge" style={{
+                      marginLeft: 4,
+                      background: adjustment === 'sa' ? '#f0fdf4' : '#fef3c7',
+                      color: adjustment === 'sa' ? '#15803d' : '#92400e',
+                      borderColor: adjustment === 'sa' ? '#bbf7d0' : '#fcd34d',
+                    }}>
+                      {adjustment.toUpperCase()}
+                    </span>
                   </h2>
                   <p className="chart-subtitle">
-                    {startDate} – {endDate} · Source: FRED / BLS
+                    {startDate} – {endDate} · Source: BLS / FRED
+                    {displayMode === 'cumulative' && ` · Reference: ${refDate}`}
                   </p>
                 </div>
               </div>
@@ -569,26 +584,25 @@ export default function JobsDashboard() {
               )}
             </div>
 
-            {anyLoading && !obsForActive.length ? (
+            {anyLoading && !selectedObs.length ? (
               <div className="chart-state" style={{ height: 440 }}>
                 <div className="spinner" />
                 <p>Fetching FRED data…</p>
               </div>
             ) : (
               <div className="chart-container" style={{ height: 440 }}>
-                <JobsChart
+                <InflationChart
                   allObs={allObs}
-                  selected={activeSelected}
-                  view={activeView}
+                  selected={selected}
+                  adjustment={adjustment}
+                  displayMode={displayMode}
+                  refDate={refDate}
                   months={months}
                   chartType={chartType}
-                  showYoY={showYoY}
-                  showMoM={showMoM}
                 />
               </div>
             )}
           </div>
-
         </main>
       </div>
     </div>

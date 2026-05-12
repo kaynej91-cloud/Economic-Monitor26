@@ -49,149 +49,171 @@ function EnergyMap({ latestData, view, selectedSources, tooltipText }) {
   }, [latestData]);
 
   return (
-    <div className="energy-map-wrap">
-      <div className="energy-map-header">
-        <span className="energy-map-title">
-          {view === 'oil' ? 'Crude Oil Production' : 'Electricity Generation'} by Country
-          <span className="energy-map-year"> — Latest available year</span>
-        </span>
-        <span className="energy-map-unit">{view === 'oil' ? 'kb/d' : 'TWh'}</span>
-      </div>
-      <div className="energy-map-container">
-        <ComposableMap
-          projectionConfig={{ scale: 147, center: [0, 10] }}
-          style={{ width: '100%', height: '100%' }}
-        >
-          <Geographies geography={GEO_URL}>
-            {({ geographies }) =>
-              geographies.map(geo => {
-                const code = ISO_NUM_TO_CODE[geo.id];
-                const value = code ? latestData[code] : null;
-                const fill = value != null && value > 0
-                  ? colorScale(value)
-                  : code ? '#cbd5e1' : '#f1f5f9';
-                return (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    fill={fill}
-                    stroke="#fff"
-                    strokeWidth={0.4}
-                    style={{ default: { outline: 'none' }, hover: { outline: 'none', opacity: 0.8 } }}
-                    onMouseEnter={(evt) => {
-                      if (!code) return;
-                      const fmt = view === 'oil' ? formatKbd(value) : formatTWh(value);
-                      setTooltip({ name: CODE_TO_NAME[code] ?? code, value: fmt, x: evt.clientX, y: evt.clientY });
-                    }}
-                    onMouseMove={(evt) => {
-                      if (!code) return;
-                      setTooltip(t => t ? { ...t, x: evt.clientX, y: evt.clientY } : t);
-                    }}
-                    onMouseLeave={() => setTooltip(null)}
-                  />
-                );
-              })
-            }
-          </Geographies>
-        </ComposableMap>
-        {tooltip && (
-          <div className="map-tooltip" style={{ left: tooltip.x + 12, top: tooltip.y - 36 }}>
-            <strong>{tooltip.name}</strong>
-            <span>{tooltip.value}</span>
-          </div>
-        )}
-      </div>
-      <div className="energy-map-legend">
-        <span>Low</span>
+    <div className="energy-map-container" style={{ position: 'relative' }}>
+      <ComposableMap projectionConfig={{ scale: 140 }} style={{ width: '100%', height: '100%' }}>
+        <Geographies geography={GEO_URL}>
+          {({ geographies }) =>
+            geographies.map(geo => {
+              const isoCode = ISO_NUM_TO_CODE[geo.id];
+              const value = isoCode ? latestData[isoCode] : null;
+              const fill = value != null && value > 0 ? colorScale(value) : '#e2e8f0';
+              return (
+                <Geography
+                  key={geo.rsmKey}
+                  geography={geo}
+                  fill={fill}
+                  stroke="#fff"
+                  strokeWidth={0.5}
+                  style={{
+                    default: { outline: 'none' },
+                    hover:   { outline: 'none', opacity: 0.8, cursor: isoCode ? 'pointer' : 'default' },
+                    pressed: { outline: 'none' },
+                  }}
+                  onMouseMove={e => {
+                    if (!isoCode) return;
+                    const name = CODE_TO_NAME[isoCode] ?? isoCode;
+                    const fmt = view === 'oil'
+                      ? (value != null ? formatKbd(value) : 'No data')
+                      : (value != null ? formatTWh(value) : 'No data');
+                    setTooltip({ x: e.clientX + 12, y: e.clientY - 28, text: `${name}: ${fmt}` });
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                />
+              );
+            })
+          }
+        </Geographies>
+      </ComposableMap>
+
+      {tooltip && (
+        <div className="map-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
+          {tooltip.text}
+        </div>
+      )}
+
+      <div className="map-legend">
+        <span className="map-legend-label">Low</span>
         <div className="map-legend-gradient" />
-        <span>High</span>
+        <span className="map-legend-label">High</span>
       </div>
     </div>
   );
 }
 
-// ── Time-series chart ────────────────────────────────────────────────────────────
+// ── Electricity chart ──────────────────────────────────────────────────────
 
-function EnergyChart({ view, years, chartData }) {
+function ElecChart({ wbData, selectedCountries, selectedSources, bySource, focusCountry, years, chartType }) {
   const labels = years.map(String);
 
-  const datasets = useMemo(() => {
-    if (view === 'oil') {
-      return chartData.map((s, i) => ({
-        label: s.label,
-        data: years.map(y => s.data[y] ?? null),
-        borderColor: COUNTRY_COLORS[i % COUNTRY_COLORS.length],
-        backgroundColor: 'transparent',
-        tension: 0.3,
-        pointRadius: years.length > 15 ? 0 : 3,
-        pointHoverRadius: 5,
-        borderWidth: 2,
-        spanGaps: false,
+  let datasets;
+  if (bySource) {
+    const country = focusCountry ?? selectedCountries[0];
+    datasets = ELEC_SOURCES
+      .filter(s => selectedSources.includes(s.id))
+      .map(src => ({
+        label: src.label,
+        data: years.map(y => {
+          const twh = computeSourceTWh(wbData, country, y);
+          return twh?.[src.id] ?? null;
+        }),
+        borderColor: ELEC_PALETTE[src.id] ?? '#94a3b8',
+        backgroundColor: (ELEC_PALETTE[src.id] ?? '#94a3b8') + '22',
+        fill: false, tension: 0.3,
+        pointRadius: 3, pointHoverRadius: 5, borderWidth: 2,
       }));
-    }
-    // Electricity: one line per (country × source)
-    const ds = [];
-    chartData.forEach((s, ci) => {
-      Object.entries(s.sources).forEach(([srcId, vals]) => {
-        const src = ELEC_SOURCES.find(e => e.id === srcId);
-        if (!src) return;
-        const baseColor = ELEC_PALETTE[srcId];
-        ds.push({
-          label: chartData.length > 1 ? `${s.label} – ${src.label}` : src.label,
-          data: years.map(y => vals[y] ?? null),
-          borderColor: baseColor,
-          backgroundColor: 'transparent',
-          tension: 0.3,
-          pointRadius: years.length > 15 ? 0 : 3,
-          pointHoverRadius: 5,
-          borderWidth: 2,
-          borderDash: ci > 0 ? [4, 3] : undefined,
-          spanGaps: false,
-        });
-      });
+  } else {
+    datasets = selectedCountries.map((code, i) => {
+      const name = CODE_TO_NAME[code] ?? code;
+      const color = COUNTRY_COLORS[i % COUNTRY_COLORS.length];
+      return {
+        label: name,
+        data: years.map(y => {
+          const twh = computeSourceTWh(wbData, code, y);
+          if (!twh) return null;
+          return selectedSources.reduce((sum, src) => sum + (twh[src] ?? 0), 0);
+        }),
+        borderColor: color,
+        backgroundColor: color + '22',
+        fill: false, tension: 0.3,
+        pointRadius: 3, pointHoverRadius: 5, borderWidth: 2,
+      };
     });
-    return ds;
-  }, [view, chartData, years]);
-
-  if (!datasets.length || datasets.every(d => d.data.every(v => v == null))) {
-    return (
-      <div className="chart-state" style={{ height: 380 }}>
-        <p>No data available for the selected options.</p>
-      </div>
-    );
   }
 
-  const yLabel = view === 'oil' ? 'Production (kb/d)' : 'Generation (TWh)';
+  if (!datasets.some(d => d.data.some(v => v != null))) return (
+    <div className="chart-state" style={{ height: 380 }}>
+      <p>No electricity data available for selection</p>
+    </div>
+  );
 
   const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 250 },
+    responsive: true, maintainAspectRatio: false, animation: { duration: 200 },
     plugins: {
-      legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 14, font: { size: 11 }, color: '#334155' } },
+      legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 14, font: { size: 12 }, color: '#334155' } },
       tooltip: {
         mode: 'index', intersect: false,
         backgroundColor: 'rgba(15,23,42,0.93)',
-        titleFont: { size: 12, weight: '600' }, bodyFont: { size: 11 }, padding: 10,
-        callbacks: {
-          label: ctx => {
-            const v = ctx.parsed.y;
-            if (v == null) return `  ${ctx.dataset.label}: —`;
-            const fmt = view === 'oil' ? formatKbd(v) : formatTWh(v);
-            return `  ${ctx.dataset.label}: ${fmt}`;
-          },
-        },
+        callbacks: { label: ctx => ctx.parsed.y != null ? `  ${ctx.dataset.label}: ${formatTWh(ctx.parsed.y)}` : null },
       },
     },
     scales: {
-      x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#64748b', maxTicksLimit: 12 }, border: { color: '#e2e8f0' } },
+      x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 11 }, color: '#64748b' }, border: { color: '#e2e8f0' } },
       y: {
         grid: { color: 'rgba(0,0,0,0.04)' },
-        ticks: {
-          font: { size: 11 }, color: '#64748b',
-          callback: v => view === 'oil' ? formatKbd(v) : formatTWh(v),
-        },
-        title: { display: true, text: yLabel, font: { size: 11 }, color: '#94a3b8' },
+        ticks: { font: { size: 11 }, color: '#64748b', callback: v => formatTWh(v) },
+        title: { display: true, text: 'Electricity Generation (TWh)', font: { size: 11 }, color: '#94a3b8' },
+        border: { color: '#e2e8f0' },
+      },
+    },
+    interaction: { mode: 'nearest', axis: 'x', intersect: false },
+  };
+
+  return (
+    <div style={{ height: 380, position: 'relative' }}>
+      <Line data={{ labels, datasets }} options={options} />
+    </div>
+  );
+}
+
+// ── Oil chart ──────────────────────────────────────────────────────────────
+
+function OilChart({ oilData, selectedCountries, years }) {
+  const labels = years.map(String);
+  const datasets = selectedCountries.map((code, i) => {
+    const name = CODE_TO_NAME[code] ?? code;
+    const color = COUNTRY_COLORS[i % COUNTRY_COLORS.length];
+    return {
+      label: name,
+      data: years.map(y => oilData[code]?.[y] ?? null),
+      borderColor: color,
+      backgroundColor: color + '22',
+      fill: false, tension: 0.3,
+      pointRadius: 3, pointHoverRadius: 5, borderWidth: 2,
+    };
+  });
+
+  if (!datasets.some(d => d.data.some(v => v != null))) return (
+    <div className="chart-state" style={{ height: 380 }}>
+      <p>No crude oil data available — enter an EIA API key below</p>
+    </div>
+  );
+
+  const options = {
+    responsive: true, maintainAspectRatio: false, animation: { duration: 200 },
+    plugins: {
+      legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 14, font: { size: 12 }, color: '#334155' } },
+      tooltip: {
+        mode: 'index', intersect: false,
+        backgroundColor: 'rgba(15,23,42,0.93)',
+        callbacks: { label: ctx => ctx.parsed.y != null ? `  ${ctx.dataset.label}: ${formatKbd(ctx.parsed.y)}` : null },
+      },
+    },
+    scales: {
+      x: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 11 }, color: '#64748b' }, border: { color: '#e2e8f0' } },
+      y: {
+        grid: { color: 'rgba(0,0,0,0.04)' },
+        ticks: { font: { size: 11 }, color: '#64748b', callback: v => formatKbd(v) },
+        title: { display: true, text: 'Crude Oil Production (kb/d)', font: { size: 11 }, color: '#94a3b8' },
         border: { color: '#e2e8f0' },
       },
     },
@@ -208,79 +230,25 @@ function EnergyChart({ view, years, chartData }) {
 // ── Main component ────────────────────────────────────────────────────────
 
 export default function EnergyDashboard() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [view, setView] = useState('electricity'); // 'electricity' | 'oil'
-  const [selectedSources, setSelectedSources] = useState(['nuclear', 'hydro', 'renew', 'fossil']);
   const [selectedCountries, setSelectedCountries] = useState(DEFAULT_SELECTED);
+  const [selectedSources, setSelectedSources] = useState(ELEC_SOURCES.map(s => s.id));
+  const [bySource, setBySource] = useState(false);
+  const [focusCountry, setFocusCountry] = useState('US');
   const [startYear, setStartYear] = useState(START_YEAR);
   const [endYear, setEndYear] = useState(END_YEAR);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // World Bank electricity data
-  const [wbRaw, setWbRaw] = useState({ total: {}, pop: {}, nuclear: {}, hydro: {}, fossil: {} });
+  const [wbData, setWbData] = useState({});
   const [wbLoading, setWbLoading] = useState(false);
   const [wbError, setWbError] = useState(null);
 
-  // EIA crude oil data
-  const [eiaKey, setEiaKeyState] = useState(getEiaApiKey());
-  const [eiaKeyInput, setEiaKeyInput] = useState('');
   const [oilData, setOilData] = useState({});
   const [oilLoading, setOilLoading] = useState(false);
   const [oilError, setOilError] = useState(null);
 
-  // ── Fetch World Bank data ───────────────────────────────────────────────────
-
-  const fetchWb = useCallback(async () => {
-    setWbLoading(true);
-    setWbError(null);
-    try {
-      const [total, pop, nuclear, hydro, fossil] = await Promise.all([
-        fetchIndicatorData(WB_INDICATORS.total,   ALL_CODES, startYear, endYear),
-        fetchIndicatorData(WB_INDICATORS.pop,     ALL_CODES, startYear, endYear),
-        fetchIndicatorData(WB_INDICATORS.nuclear, ALL_CODES, startYear, endYear),
-        fetchIndicatorData(WB_INDICATORS.hydro,   ALL_CODES, startYear, endYear),
-        fetchIndicatorData(WB_INDICATORS.fossil,  ALL_CODES, startYear, endYear),
-      ]);
-      setWbRaw({ total, pop, nuclear, hydro, fossil });
-    } catch (err) {
-      setWbError(err.message);
-    } finally {
-      setWbLoading(false);
-    }
-  }, [startYear, endYear]);
-
-  const prevRange = useRef({ startYear, endYear });
-  useEffect(() => {
-    if (prevRange.current.startYear !== startYear || prevRange.current.endYear !== endYear) {
-      setWbRaw({ total: {}, pop: {}, nuclear: {}, hydro: {}, fossil: {} });
-      setOilData({});
-      prevRange.current = { startYear, endYear };
-    }
-    fetchWb();
-  }, [startYear, endYear, fetchWb]);
-
-  // ── Fetch EIA crude oil ────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!eiaKey || view !== 'oil') return;
-    setOilLoading(true);
-    setOilError(null);
-    fetchEiaCrudeOil(ALL_CODES, startYear, endYear)
-      .then(data => setOilData(data))
-      .catch(err => setOilError(
-        err.message === 'EIA_BAD_KEY' ? 'Invalid EIA API key' : err.message
-      ))
-      .finally(() => setOilLoading(false));
-  }, [eiaKey, view, startYear, endYear]);
-
-  const saveEiaKey = () => {
-    if (!eiaKeyInput.trim()) return;
-    setEiaApiKey(eiaKeyInput.trim());
-    setEiaKeyState(eiaKeyInput.trim());
-    setEiaKeyInput('');
-    setOilData({});
-  };
-
-  // ── Derived data for chart ───────────────────────────────────────────────────
+  const [eiaKey, setEiaKeyState] = useState(getEiaApiKey());
+  const [eiaKeyInput, setEiaKeyInput] = useState('');
 
   const years = useMemo(() => {
     const arr = [];
@@ -288,49 +256,84 @@ export default function EnergyDashboard() {
     return arr;
   }, [startYear, endYear]);
 
-  const chartData = useMemo(() => {
-    if (view === 'oil') {
-      return selectedCountries.map(code => ({
-        label: CODE_TO_NAME[code] ?? code,
-        data: oilData[code] ?? {},
-      }));
-    }
-    return selectedCountries.map(code => {
-      const sources = {};
-      selectedSources.forEach(srcId => { sources[srcId] = {}; });
-      years.forEach(year => {
-        const tw = computeSourceTWh(wbRaw, code, year);
-        if (!tw) return;
-        selectedSources.forEach(srcId => {
-          if (tw[srcId] != null) sources[srcId][year] = tw[srcId];
-        });
+  // Latest year with any data — for the choropleth
+  const latestYear = useMemo(() => {
+    for (let y = endYear; y >= startYear; y--) {
+      const hasData = ENERGY_COUNTRIES.some(c => {
+        if (view === 'oil') return oilData[c.code]?.[y] != null;
+        const twh = computeSourceTWh(wbData, c.code, y);
+        return twh && selectedSources.some(s => (twh[s] ?? 0) > 0);
       });
-      return { label: CODE_TO_NAME[code] ?? code, sources };
-    });
-  }, [view, selectedCountries, selectedSources, years, wbRaw, oilData]);
+      if (hasData) return y;
+    }
+    return endYear;
+  }, [wbData, oilData, view, selectedSources, startYear, endYear]);
 
-  // Latest year data for map
   const latestMapData = useMemo(() => {
-    const result = {};
-    ENERGY_COUNTRIES.forEach(({ code }) => {
+    return Object.fromEntries(ENERGY_COUNTRIES.map(c => {
       if (view === 'oil') {
-        const obs = oilData[code];
-        if (obs) {
-          const latest = Math.max(...Object.keys(obs).map(Number));
-          result[code] = obs[latest];
-        }
-      } else {
-        for (let y = endYear; y >= startYear; y--) {
-          const tw = computeSourceTWh(wbRaw, code, y);
-          if (tw) {
-            result[code] = selectedSources.reduce((sum, srcId) => sum + (tw[srcId] ?? 0), 0);
-            break;
-          }
-        }
+        return [c.code, oilData[c.code]?.[latestYear] ?? null];
       }
-    });
-    return result;
-  }, [view, wbRaw, oilData, selectedSources, startYear, endYear]);
+      const twh = computeSourceTWh(wbData, c.code, latestYear);
+      const val = twh ? selectedSources.reduce((s, src) => s + (twh[src] ?? 0), 0) : null;
+      return [c.code, val];
+    }));
+  }, [wbData, oilData, view, selectedSources, latestYear]);
+
+  // ── Fetch World Bank electricity data ────────────────────────────────────
+
+  const fetchWb = useCallback(async () => {
+    setWbLoading(true); setWbError(null);
+    try {
+      const codes = ALL_CODES.join(';');
+      const results = await Promise.all(
+        Object.entries(WB_INDICATORS).map(([key, indId]) =>
+          fetchIndicatorData(indId, ALL_CODES, startYear, endYear)
+            .then(data => [key, data])
+        )
+      );
+      const raw = Object.fromEntries(results);
+      setWbData(raw);
+    } catch (e) {
+      setWbError(e.message);
+    } finally {
+      setWbLoading(false);
+    }
+  }, [startYear, endYear]);
+
+  useEffect(() => { fetchWb(); }, [fetchWb]);
+
+  // ── Fetch EIA crude oil data ──────────────────────────────────────────────
+
+  const fetchOil = useCallback(async () => {
+    if (!eiaKey) return;
+    setOilLoading(true); setOilError(null);
+    try {
+      const data = await fetchEiaCrudeOil(ALL_CODES, startYear, endYear);
+      setOilData(data);
+    } catch (e) {
+      setOilError(e.message);
+    } finally {
+      setOilLoading(false);
+    }
+  }, [eiaKey, startYear, endYear]);
+
+  useEffect(() => { if (eiaKey) fetchOil(); }, [fetchOil, eiaKey]);
+
+  const saveEiaKey = () => {
+    if (!eiaKeyInput.trim()) return;
+    setEiaApiKey(eiaKeyInput.trim());
+    setEiaKeyState(eiaKeyInput.trim());
+    setEiaKeyInput('');
+  };
+
+  const toggleCountry = (code) => {
+    setSelectedCountries(prev =>
+      prev.includes(code)
+        ? prev.length > 1 ? prev.filter(c => c !== code) : prev
+        : prev.length < 6 ? [...prev, code] : prev
+    );
+  };
 
   const toggleSource = (id) => {
     setSelectedSources(prev =>
@@ -339,17 +342,6 @@ export default function EnergyDashboard() {
         : [...prev, id]
     );
   };
-
-  const toggleCountry = (code) => {
-    setSelectedCountries(prev =>
-      prev.includes(code)
-        ? prev.length > 1 ? prev.filter(c => c !== code) : prev
-        : prev.length >= 6 ? prev : [...prev, code]
-    );
-  };
-
-  const isLoading = view === 'oil' ? oilLoading : wbLoading;
-  const error = view === 'oil' ? oilError : wbError;
 
   return (
     <div className="app">
@@ -368,6 +360,7 @@ export default function EnergyDashboard() {
           <Link to="/" className="nav-link">Global</Link>
           <Link to="/us" className="nav-link">US Jobs</Link>
           <Link to="/energy" className="nav-link nav-link--active">Energy</Link>
+          <Link to="/inflation" className="nav-link">Inflation</Link>
         </nav>
       </header>
 
@@ -376,6 +369,7 @@ export default function EnergyDashboard() {
           <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
         )}
 
+        {/* ── Sidebar ──────────────────────────────────────────────────── */}
         <aside className={`sidebar${sidebarOpen ? ' is-open' : ''}`}>
           <button className="sidebar-close-btn" onClick={() => setSidebarOpen(false)} aria-label="Close">✕</button>
 
@@ -384,28 +378,21 @@ export default function EnergyDashboard() {
             <label className="form-label">View</label>
             <div className="us-cat-tabs">
               <button className={`us-cat-tab${view === 'electricity' ? ' active' : ''}`}
-                onClick={() => { setView('electricity'); setSidebarOpen(false); }}>
-                ⚡ Electricity
-              </button>
+                onClick={() => setView('electricity')}>⚡ Electricity Generation</button>
               <button className={`us-cat-tab${view === 'oil' ? ' active' : ''}`}
-                onClick={() => { setView('oil'); setSidebarOpen(false); }}>
-                🛢 Crude Oil
-              </button>
+                onClick={() => setView('oil')}>🛢 Crude Oil Production</button>
             </div>
           </div>
 
-          <div className="sidebar-divider" />
-
-          {/* Sources (electricity only) */}
           {view === 'electricity' && (
             <>
+              <div className="sidebar-divider" />
               <div className="sidebar-section">
-                <label className="form-label">Energy Sources</label>
+                <label className="form-label">Sources</label>
                 <div className="metric-list">
                   {ELEC_SOURCES.map(src => (
                     <label key={src.id} className="metric-item">
-                      <input type="checkbox"
-                        checked={selectedSources.includes(src.id)}
+                      <input type="checkbox" checked={selectedSources.includes(src.id)}
                         onChange={() => toggleSource(src.id)} />
                       <span className="metric-dot" style={{ background: src.color }} />
                       <span className="metric-name">{src.label}</span>
@@ -413,25 +400,43 @@ export default function EnergyDashboard() {
                   ))}
                 </div>
               </div>
+
               <div className="sidebar-divider" />
+              <div className="sidebar-section">
+                <label className="form-label">Chart mode</label>
+                <div className="us-cat-tabs">
+                  <button className={`us-cat-tab${!bySource ? ' active' : ''}`}
+                    onClick={() => setBySource(false)}>By country (sources summed)</button>
+                  <button className={`us-cat-tab${bySource ? ' active' : ''}`}
+                    onClick={() => setBySource(true)}>By source (one country)</button>
+                </div>
+                {bySource && (
+                  <select className="form-select" style={{ marginTop: 8 }}
+                    value={focusCountry} onChange={e => setFocusCountry(e.target.value)}>
+                    {ENERGY_COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                  </select>
+                )}
+              </div>
             </>
           )}
 
-          {/* Countries */}
+          <div className="sidebar-divider" />
+
+          {/* Country selector */}
           <div className="sidebar-section">
             <label className="form-label">
               Countries
               <span className="badge">{selectedCountries.length}/6</span>
             </label>
             <div className="metric-list">
-              {ENERGY_COUNTRIES.map(({ code, name }) => {
-                const checked = selectedCountries.includes(code);
+              {ENERGY_COUNTRIES.map(c => {
+                const checked = selectedCountries.includes(c.code);
                 const disabled = !checked && selectedCountries.length >= 6;
                 return (
-                  <label key={code} className={`metric-item${disabled ? ' disabled' : ''}`}>
+                  <label key={c.code} className={`metric-item${disabled ? ' disabled' : ''}`}>
                     <input type="checkbox" checked={checked} disabled={disabled}
-                      onChange={() => toggleCountry(code)} />
-                    <span className="metric-name">{name}</span>
+                      onChange={() => toggleCountry(c.code)} />
+                    <span className="metric-name">{c.name}</span>
                   </label>
                 );
               })}
@@ -440,7 +445,7 @@ export default function EnergyDashboard() {
 
           <div className="sidebar-divider" />
 
-          {/* Date range */}
+          {/* Year range */}
           <div className="sidebar-section">
             <div className="form-group">
               <label className="form-label">Year Range</label>
@@ -459,7 +464,6 @@ export default function EnergyDashboard() {
             </div>
           </div>
 
-          {/* EIA key (crude oil only) */}
           {view === 'oil' && (
             <>
               <div className="sidebar-divider" />
@@ -485,7 +489,7 @@ export default function EnergyDashboard() {
                         onClick={saveEiaKey} disabled={!eiaKeyInput.trim()}>
                         Save Key
                       </button>
-                      <p className="form-hint">Free at eia.gov/opendata</p>
+                      <p className="form-hint">Free at eia.gov/opendata/</p>
                     </>
                   )}
                 </div>
@@ -494,69 +498,84 @@ export default function EnergyDashboard() {
           )}
         </aside>
 
+        {/* ── Main content ─────────────────────────────────────────────── */}
         <main className="main-content">
-          {/* Source banner for Oil view without key */}
-          {view === 'oil' && !eiaKey && (
-            <div className="us-key-banner">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <div>
-                <strong>EIA API key required for crude oil data</strong>
-                <p>Enter your free key in the sidebar. Register at eia.gov/opendata</p>
-              </div>
-            </div>
-          )}
 
-          {error && (
-            <div className="error-banner" role="alert">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              {error}
-            </div>
-          )}
-
-          {/* Chart card */}
-          <div className="chart-card">
+          {/* Map */}
+          <div className="chart-card" style={{ marginBottom: 20 }}>
             <div className="chart-card-header">
-              <div className="chart-card-title-row">
-                <div>
-                  <h2 className="chart-title">
-                    {view === 'oil' ? 'Crude Oil Production' : 'Electricity Generation'}
-                    <span className="energy-unit-info" title={
-                      view === 'oil'
-                        ? 'kb/d = thousand barrels per day. 1 Mbd = 1,000 kb/d.'
-                        : 'TWh = terawatt-hours (1 TWh = 1 billion kWh). PWh = 1,000 TWh. Solar/Wind/Geo are grouped as World Bank reports them combined.'
-                    }> ⓘ</span>
-                  </h2>
-                  <p className="chart-subtitle">
-                    {selectedCountries.map(c => CODE_TO_NAME[c]).join(', ')} · {startYear}–{endYear} · Source: {view === 'oil' ? 'EIA' : 'World Bank'}
-                  </p>
-                </div>
+              <div>
+                <h2 className="chart-title">
+                  {view === 'electricity' ? 'Electricity Generation by Country' : 'Crude Oil Production by Country'}
+                  <span className="chart-badge" style={{ marginLeft: 8 }}>Latest: {latestYear}</span>
+                </h2>
+                <p className="chart-subtitle">
+                  {view === 'electricity'
+                    ? `Sum of selected sources · TWh = terawatt-hours (1 TWh = 1 billion kWh) · Source: World Bank`
+                    : `kb/d = thousand barrels per day · Source: EIA`}
+                </p>
               </div>
             </div>
-
-            {isLoading ? (
-              <div className="chart-state" style={{ height: 380 }}>
-                <div className="spinner" />
-                <p>Fetching data…</p>
+            {wbLoading && view === 'electricity' ? (
+              <div className="chart-state" style={{ height: 340 }}>
+                <div className="spinner" /><p>Loading World Bank data…</p>
+              </div>
+            ) : wbError ? (
+              <div className="chart-state" style={{ height: 340 }}>
+                <p style={{ color: '#ef4444' }}>Error: {wbError}</p>
               </div>
             ) : (
-              <div className="chart-container" style={{ height: 380 }}>
-                <EnergyChart view={view} years={years} chartData={chartData} />
-              </div>
+              <EnergyMap latestData={latestMapData} view={view} />
             )}
           </div>
 
-          {/* Choropleth map */}
-          <EnergyMap
-            latestData={latestMapData}
-            view={view}
-            selectedSources={selectedSources}
-          />
+          {/* Chart */}
+          <div className="chart-card">
+            <div className="chart-card-header">
+              <div>
+                <h2 className="chart-title">
+                  {view === 'electricity' ? 'Electricity Generation Over Time' : 'Crude Oil Production Over Time'}
+                </h2>
+                <p className="chart-subtitle">{startYear} – {endYear} · {view === 'electricity' ? 'Source: World Bank' : 'Source: EIA'}</p>
+              </div>
+              {oilError && view === 'oil' && (
+                <div className="missing-data-notice" style={{ background: '#fef2f2', borderColor: '#fca5a5' }}>
+                  <span style={{ color: '#dc2626' }}>{oilError}</span>
+                </div>
+              )}
+            </div>
+
+            {view === 'electricity' ? (
+              wbLoading ? (
+                <div className="chart-state" style={{ height: 380 }}>
+                  <div className="spinner" /><p>Loading…</p>
+                </div>
+              ) : (
+                <ElecChart
+                  wbData={wbData}
+                  selectedCountries={selectedCountries}
+                  selectedSources={selectedSources}
+                  bySource={bySource}
+                  focusCountry={focusCountry}
+                  years={years}
+                  chartType="line"
+                />
+              )
+            ) : (
+              oilLoading ? (
+                <div className="chart-state" style={{ height: 380 }}>
+                  <div className="spinner" /><p>Loading EIA data…</p>
+                </div>
+              ) : (
+                <OilChart
+                  oilData={oilData}
+                  selectedCountries={selectedCountries}
+                  years={years}
+                />
+              )
+            )}
+          </div>
+
         </main>
       </div>
     </div>
