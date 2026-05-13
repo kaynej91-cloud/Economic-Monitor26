@@ -1,4 +1,4 @@
-/* ── Reset & Base ───────────────────────────────────────────────── */
+/* ── Reset & Base ──────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -49,7 +49,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Layout ─────────────────────────────────────────────────────── */
+/* ── Layout ────────────────────────────────────────────────── */
 .app {
   display: flex;
   flex-direction: column;
@@ -102,7 +102,7 @@ body {
   margin-top: var(--header-h);
 }
 
-/* ── Sidebar ─────────────────────────────────────────────────────── */
+/* ── Sidebar ─────────────────────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-w);
   min-width: var(--sidebar-w);
@@ -140,7 +140,7 @@ body {
   background: var(--surface-alt);
 }
 
-/* ── Form Controls ───────────────────────────────────────────────── */
+/* ── Form Controls ──────────────────────────────────────────────── */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -283,7 +283,7 @@ body {
   text-align: center;
 }
 
-/* ── Date Range ──────────────────────────────────────────────────── */
+/* ── Date Range ────────────────────────────────────────────────── */
 .date-range {
   display: flex;
   gap: 10px;
@@ -337,7 +337,7 @@ body {
   color: var(--text);
 }
 
-/* ── Fetch Button ────────────────────────────────────────────────── */
+/* ── Fetch Button ──────────────────────────────────────────────── */
 .fetch-btn {
   width: 100%;
   padding: 10px;
@@ -387,7 +387,7 @@ body {
   flex-shrink: 0;
 }
 
-/* ── Main Content ────────────────────────────────────────────────── */
+/* ── Main Content ──────────────────────────────────────────────── */
 .main-content {
   margin-left: var(--sidebar-w);
   flex: 1;
@@ -398,7 +398,7 @@ body {
   max-width: calc(100vw - var(--sidebar-w));
 }
 
-/* ── Error Banner ────────────────────────────────────────────────── */
+/* ── Error Banner ──────────────────────────────────────────────── */
 .error-banner {
   background: var(--error-bg);
   border: 1px solid var(--error-border);
@@ -411,7 +411,7 @@ body {
   gap: 8px;
 }
 
-/* ── Chart Card ──────────────────────────────────────────────────── */
+/* ── Chart Card ────────────────────────────────────────────────── */
 .chart-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -479,7 +479,7 @@ body {
   color: var(--text-muted);
 }
 
-/* ── Spinner ─────────────────────────────────────────────────────── */
+/* ── Spinner ───────────────────────────────────────────────────── */
 .spinner {
   width: 28px;
   height: 28px;
@@ -600,7 +600,7 @@ body {
   color: var(--text-light) !important;
 }
 
-/* ── Searchable indicator picker ─────────────────────────────────── */
+/* ── Searchable indicator picker ───────────────────────────────────────── */
 .ind-picker {
   position: relative;
   outline: none;
@@ -686,7 +686,7 @@ body {
   cursor: default;
 }
 
-/* ── Coverage tags ───────────────────────────────────────────────── */
+/* ── Coverage tags ─────────────────────────────────────────────────── */
 .coverage-tag {
   font-size: 10px;
   font-weight: 600;
@@ -703,7 +703,7 @@ body {
   color: #b45309;
 }
 
-/* ── Toggle rows (checkbox options) ─────────────────────────────── */
+/* ── Toggle rows (checkbox options) ───────────────────────────────────────── */
 .options-group {
   margin-top: 12px;
 }
@@ -747,7 +747,7 @@ body {
   line-height: 1.4;
 }
 
-/* ── Auto-fetch hint ─────────────────────────────────────────────── */
+/* ── Auto-fetch hint ─────────────────────────────────────────────────── */
 .auto-fetch-hint {
   text-align: center;
   font-size: 11px;
@@ -756,7 +756,7 @@ body {
   line-height: 1.4;
 }
 
-/* ── Chart header with badges ────────────────────────────────────── */
+/* ── Chart header with badges ──────────────────────────────────────────── */
 .chart-card-title-row {
   display: flex;
   align-items: flex-start;
@@ -782,7 +782,7 @@ body {
   white-space: nowrap;
 }
 
-/* ── Missing-data notice ─────────────────────────────────────────── */
+/* ── Missing-data notice ─────────────────────────────────────────────── */
 .missing-data-notice {
   display: flex;
   align-items: flex-start;
@@ -803,7 +803,7 @@ body {
   color: #d97706;
 }
 
-/* ── Indicator dropdown coverage tags ────────────────────────────── */
+/* ── Indicator dropdown coverage tags ────────────────────────────────────────── */
 .ind-option {
   display: flex;
   align-items: center;
@@ -830,7 +830,7 @@ body {
   color: #b45309;
 }
 
-/* ── Mobile / Responsive ─────────────────────────────────────────── */
+/* ── Mobile / Responsive ─────────────────────────────────────────────── */
 /* MUST stay at the end of the file so these rules win over base styles */
 
 /* Elements hidden on desktop, shown on mobile */
@@ -864,7 +864,33 @@ body {
 .header-left {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-shrink: 1;
+  min-width: 0;
+}
+.header-nav::-webkit-scrollbar { display: none; }
+
+.nav-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.75);
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: 8px;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.nav-link:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.nav-link--active { background: rgba(255,255,255,0.2); color: #fff; font-weight: 600; }
 
 /* Overlay backdrop */
 .sidebar-overlay {
