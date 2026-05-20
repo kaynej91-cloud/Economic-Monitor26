@@ -221,10 +221,16 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-shrink: 1;
+  min-width: 0;
 }
+.header-nav::-webkit-scrollbar { display: none; }
 .nav-link {
   font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.75);
-  text-decoration: none; padding: 5px 12px; border-radius: 8px;
+  text-decoration: none; padding: 5px 10px; border-radius: 8px;
   transition: background 0.12s, color 0.12s; white-space: nowrap;
 }
 .nav-link:hover { background: rgba(255,255,255,0.15); color: #fff; }
