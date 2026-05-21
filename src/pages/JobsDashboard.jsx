@@ -143,7 +143,7 @@ function JobsChart({ allObs, selected, view, months, chartType, showYoY, showMoM
   }).filter(Boolean);
 
   if (!datasets.length) return (
-    <div className="chart-state" style={{ height: 440 }}>
+    <div className="chart-state">
       <p>Select at least one metric to display</p>
     </div>
   );
@@ -205,7 +205,7 @@ function JobsChart({ allObs, selected, view, months, chartType, showYoY, showMoM
 
   const ChartComp = chartType === 'bar' ? Bar : Line;
   return (
-    <div style={{ height: 440, position: 'relative' }}>
+    <div style={{ height: '100%', position: 'relative' }}>
       <ChartComp data={{ labels, datasets }} options={options} />
     </div>
   );
@@ -570,12 +570,12 @@ export default function JobsDashboard() {
             </div>
 
             {anyLoading && !obsForActive.length ? (
-              <div className="chart-state" style={{ height: 440 }}>
+              <div className="chart-state">
                 <div className="spinner" />
                 <p>Fetching FRED data…</p>
               </div>
             ) : (
-              <div className="chart-container" style={{ height: 440 }}>
+              <div className="chart-container">
                 <JobsChart
                   allObs={allObs}
                   selected={activeSelected}

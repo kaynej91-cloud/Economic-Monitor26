@@ -957,7 +957,8 @@ body {
     gap: 14px;
   }
 
-  .chart-container { height: 260px; }
+  .chart-container { height: 300px; }
+  .chart-state     { height: 300px; }
 
   .data-table th,
   .data-table td {

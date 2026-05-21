@@ -149,7 +149,7 @@ function InflationChart({ allObs, selected, adjustment, displayMode, refDate, mo
   }).filter(Boolean);
 
   if (!datasets.length) return (
-    <div className="chart-state" style={{ height: 440 }}>
+    <div className="chart-state">
       <p>Select at least one category to display</p>
     </div>
   );
@@ -212,7 +212,7 @@ function InflationChart({ allObs, selected, adjustment, displayMode, refDate, mo
 
   const ChartComp = chartType === 'bar' ? Bar : Line;
   return (
-    <div style={{ height: 440, position: 'relative' }}>
+    <div style={{ height: '100%', position: 'relative' }}>
       <ChartComp data={{ labels: months.map(fmtLabel), datasets }} options={options} />
     </div>
   );
@@ -585,12 +585,12 @@ export default function InflationDashboard() {
             </div>
 
             {anyLoading && !selectedObs.length ? (
-              <div className="chart-state" style={{ height: 440 }}>
+              <div className="chart-state">
                 <div className="spinner" />
                 <p>Fetching FRED data…</p>
               </div>
             ) : (
-              <div className="chart-container" style={{ height: 440 }}>
+              <div className="chart-container">
                 <InflationChart
                   allObs={allObs}
                   selected={selected}
