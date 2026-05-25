@@ -66,7 +66,7 @@ function trimTrailingEmpty(months, ...obsMaps) {
 
 function findCat(id) { return CPI_CATEGORIES.find(c => c.id === id); }
 
-// ── KPI card ──────────────────────────────────────────────────────────────
+// ── KPI card ───────────────────────────────────────────────────────────────
 
 function KpiCard({ catId, adjustment, kpiObs, loading }) {
   const cat = findCat(catId);
@@ -117,7 +117,7 @@ function KpiCard({ catId, adjustment, kpiObs, loading }) {
   );
 }
 
-// ── Inflation chart ───────────────────────────────────────────────────────
+// ── Inflation chart ────────────────────────────────────────────────────────────
 
 function InflationChart({ allObs, selected, adjustment, displayMode, refDate, months, chartType }) {
   const datasets = selected.map((catId, i) => {
@@ -238,7 +238,7 @@ export default function InflationDashboard() {
   const [errors, setErrors] = useState({});
   const [kpiObs, setKpiObs] = useState({});
 
-  // ── Fetch helpers ────────────────────────────────────────────────────────
+  // ── Fetch helpers ──────────────────────────────────────────────────────
 
   const fetchOne = useCallback(async (sid) => {
     if (!apiKey) return;
@@ -353,6 +353,7 @@ export default function InflationDashboard() {
           <Link to="/us" className="nav-link">US Jobs</Link>
           <Link to="/energy" className="nav-link">Energy</Link>
           <Link to="/inflation" className="nav-link nav-link--active">Inflation</Link>
+          <Link to="/wages" className="nav-link">Wages</Link>
         </nav>
       </header>
 

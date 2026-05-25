@@ -69,7 +69,7 @@ function trimTrailingEmpty(months, ...obsMaps) {
   return months.slice(0, months.indexOf(last) + 1);
 }
 
-// ── KPI card ──────────────────────────────────────────────────────────────
+// ── KPI card ───────────────────────────────────────────────────────────────
 
 function KpiCard({ kpi, obs, loading }) {
   if (loading && !obs) return (
@@ -116,7 +116,7 @@ function KpiCard({ kpi, obs, loading }) {
   );
 }
 
-// ── Main chart ────────────────────────────────────────────────────────────
+// ── Main chart ───────────────────────────────────────────────────────────────
 
 function JobsChart({ allObs, selected, view, months, chartType, showYoY, showMoM }) {
   const labels = months.map(fmtLabel);
@@ -241,7 +241,7 @@ export default function JobsDashboard() {
   const activeView = VIEWS.find(v => v.id === activeViewId);
   const activeSelected = selected[activeViewId] ?? [];
 
-  // ── Fetch helpers ────────────────────────────────────────────────────────
+  // ── Fetch helpers ──────────────────────────────────────────────────────
 
   const fetchOne = useCallback(async (seriesId) => {
     if (!apiKey) return;
@@ -291,7 +291,7 @@ export default function JobsDashboard() {
     }
   }, [startDate, endDate]);
 
-  // ── View / metric toggle ─────────────────────────────────────────────────
+  // ── View / metric toggle ───────────────────────────────────────────────
 
   const switchView = (id) => {
     setActiveViewId(id);
@@ -354,6 +354,7 @@ export default function JobsDashboard() {
           <Link to="/us" className="nav-link nav-link--active">US Jobs</Link>
           <Link to="/energy" className="nav-link">Energy</Link>
           <Link to="/inflation" className="nav-link">Inflation</Link>
+          <Link to="/wages" className="nav-link">Wages</Link>
         </nav>
       </header>
 

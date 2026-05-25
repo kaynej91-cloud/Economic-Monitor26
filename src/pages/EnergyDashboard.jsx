@@ -36,7 +36,7 @@ const ELEC_PALETTE = {
 };
 const COUNTRY_COLORS = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#06b6d4','#f97316','#ec4899'];
 
-// ── World Map ──────────────────────────────────────────────────────────────
+// ── World Map ───────────────────────────────────────────────────────────
 
 function EnergyMap({ latestData, view, selectedSources, tooltipText }) {
   const [tooltip, setTooltip] = useState(null);
@@ -175,7 +175,7 @@ function ElecChart({ wbData, selectedCountries, selectedSources, bySource, focus
   );
 }
 
-// ── Oil chart ──────────────────────────────────────────────────────────────
+// ── Oil chart ───────────────────────────────────────────────────────────────
 
 function OilChart({ oilData, selectedCountries, years }) {
   const labels = years.map(String);
@@ -280,7 +280,7 @@ export default function EnergyDashboard() {
     }));
   }, [wbData, oilData, view, selectedSources, latestYear]);
 
-  // ── Fetch World Bank electricity data ────────────────────────────────────
+  // ── Fetch World Bank electricity data ────────────────────────────────────────
 
   const fetchWb = useCallback(async () => {
     setWbLoading(true); setWbError(null);
@@ -361,6 +361,7 @@ export default function EnergyDashboard() {
           <Link to="/us" className="nav-link">US Jobs</Link>
           <Link to="/energy" className="nav-link nav-link--active">Energy</Link>
           <Link to="/inflation" className="nav-link">Inflation</Link>
+          <Link to="/wages" className="nav-link">Wages</Link>
         </nav>
       </header>
 
