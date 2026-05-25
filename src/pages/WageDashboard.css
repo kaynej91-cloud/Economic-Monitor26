@@ -1,0 +1,205 @@
+/* Navigation -------------------------------------------------------------- */
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-shrink: 1;
+  min-width: 0;
+}
+.header-nav::-webkit-scrollbar { display: none; }
+
+.nav-link {
+  font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.75);
+  text-decoration: none; padding: 5px 10px; border-radius: 8px;
+  transition: background 0.12s, color 0.12s; white-space: nowrap;
+}
+.nav-link:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.nav-link--active { background: rgba(255,255,255,0.2); color: #fff; font-weight: 600; }
+
+/* API key banner ---------------------------------------------------------- */
+
+.us-key-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  color: #92400e;
+}
+.us-key-banner svg { flex-shrink: 0; margin-top: 2px; color: #f59e0b; }
+.us-key-banner strong { display: block; font-size: 13px; margin-bottom: 2px; }
+.us-key-banner p { font-size: 12px; margin: 0; color: #78350f; }
+
+/* Mode toggle ------------------------------------------------------------- */
+
+.wg-mode-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.sa-btn {
+  flex: 1;
+  padding: 6px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.sa-btn:hover { background: #f1f5f9; color: #334155; }
+.sa-btn.active {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+/* Series list ------------------------------------------------------------- */
+
+.wg-series-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wg-series-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.wg-series-item:hover { background: #f8fafc; }
+
+.wg-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.wg-series-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.wg-series-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.wg-series-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Spinner ----------------------------------------------------------------- */
+
+.metric-spinner {
+  width: 12px; height: 12px;
+  border: 2px solid #e2e8f0;
+  border-top-color: var(--primary, #3b82f6);
+  border-radius: 50%;
+  animation: wg-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes wg-spin { to { transform: rotate(360deg); } }
+
+/* Key saved row ----------------------------------------------------------- */
+
+.key-set-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.key-set-badge {
+  font-size: 12px; font-weight: 600; color: #16a34a;
+  background: #dcfce7; border-radius: 6px; padding: 3px 8px;
+}
+.key-clear-btn {
+  font-size: 12px; color: #64748b; background: none;
+  border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px 10px; cursor: pointer;
+}
+.key-clear-btn:hover { background: #f8fafc; }
+
+/* Inline legend (pill row above chart) ------------------------------------ */
+
+.wg-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+
+.wg-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.12s;
+  user-select: none;
+}
+.wg-legend-item:hover { background: #f1f5f9; }
+.wg-legend-item--off { opacity: 0.4; }
+
+.wg-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Inline mode buttons in chart header ------------------------------------- */
+
+.wg-mode-inline {
+  display: flex;
+  gap: 4px;
+}
+
+/* Chart body -------------------------------------------------------------- */
+
+.wg-chart-body {
+  position: relative;
+  height: 500px;
+  padding: 16px 22px 22px;
+}
+
+.wg-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  height: 500px;
+  color: #64748b;
+  text-align: center;
+  padding: 24px;
+}
+
+/* Responsive -------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  .wg-chart-body { height: 320px; }
+  .wg-empty-state { height: 320px; }
+}

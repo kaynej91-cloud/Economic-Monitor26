@@ -6,6 +6,7 @@ import DataTable from './components/DataTable';
 import JobsDashboard from './pages/JobsDashboard';
 import EnergyDashboard from './pages/EnergyDashboard';
 import InflationDashboard from './pages/InflationDashboard';
+import WageDashboard from './pages/WageDashboard';
 import { fetchIndicatorData } from './api/worldbank';
 import { INDICATORS } from './constants/indicators';
 import { COUNTRIES } from './constants/countries';
@@ -130,6 +131,7 @@ function GlobalDashboard() {
           <Link to="/us" className="nav-link">US Jobs</Link>
           <Link to="/energy" className="nav-link">Energy</Link>
           <Link to="/inflation" className="nav-link">Inflation</Link>
+          <Link to="/wages" className="nav-link">Wages</Link>
         </nav>
       </header>
 
@@ -210,6 +212,7 @@ export default function App() {
       <Route path="/us" element={<JobsDashboard />} />
       <Route path="/energy" element={<EnergyDashboard />} />
       <Route path="/inflation" element={<InflationDashboard />} />
+      <Route path="/wages" element={<WageDashboard />} />
     </Routes>
   );
 }
