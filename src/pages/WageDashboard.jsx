@@ -119,12 +119,12 @@ export default function WageDashboard() {
     }
   }, [apiKey]);
 
-  // Fetch all on mount / apiKey change
+  // Fetch all on mount / apiKey change — staggered to avoid 429 rate limit
   useEffect(() => {
     if (!apiKey) return;
     setAllObs({});
     setErrors({});
-    SERIES.forEach(s => doFetch(s.id, startDate));
+    SERIES.forEach((s, i) => setTimeout(() => doFetch(s.id, startDate), i * 300));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey]);
 
@@ -135,7 +135,7 @@ export default function WageDashboard() {
     prevStart.current = startDate;
     setAllObs({});
     setErrors({});
-    SERIES.forEach(s => doFetch(s.id, startDate));
+    SERIES.forEach((s, i) => setTimeout(() => doFetch(s.id, startDate), i * 300));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, apiKey]);
 

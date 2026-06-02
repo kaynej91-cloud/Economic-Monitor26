@@ -30,7 +30,12 @@ export async function fetchSeries(seriesId, startDate, endDate) {
   url.searchParams.set('file_type', 'json');
   url.searchParams.set('api_key', apiKey);
 
-  const res = await fetch(url.toString());
+  let res;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await fetch(url.toString());
+    if (res.status !== 429) break;
+    await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+  }
   if (!res.ok) {
     if (res.status === 400 || res.status === 403) throw new Error('FRED_BAD_KEY');
     throw new Error(`FRED API error ${res.status}`);
