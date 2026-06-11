@@ -1,3 +1,4 @@
+// FRED API proxy client
 const PROXY = '/api/fred';
 
 export function getFredApiKey() {
