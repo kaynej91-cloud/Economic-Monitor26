@@ -1,0 +1,30 @@
+{
+  "source": "Census Bureau CPS Voting and Registration Supplement; United States Elections Project (VEP denominator)",
+  "retrieved": "2025-01-01",
+  "notes": "VEP = Voting Eligible Population turnout. P = presidential, M = midterm.",
+  "data": [
+    {"year": 1980, "election": "P", "turnout": 52.6},
+    {"year": 1982, "election": "M", "turnout": 38.0},
+    {"year": 1984, "election": "P", "turnout": 53.1},
+    {"year": 1986, "election": "M", "turnout": 33.5},
+    {"year": 1988, "election": "P", "turnout": 50.3},
+    {"year": 1990, "election": "M", "turnout": 33.0},
+    {"year": 1992, "election": "P", "turnout": 55.2},
+    {"year": 1994, "election": "M", "turnout": 36.0},
+    {"year": 1996, "election": "P", "turnout": 49.0},
+    {"year": 1998, "election": "M", "turnout": 32.8},
+    {"year": 2000, "election": "P", "turnout": 51.3},
+    {"year": 2002, "election": "M", "turnout": 37.0},
+    {"year": 2004, "election": "P", "turnout": 55.7},
+    {"year": 2006, "election": "M", "turnout": 37.1},
+    {"year": 2008, "election": "P", "turnout": 57.1},
+    {"year": 2010, "election": "M", "turnout": 37.8},
+    {"year": 2012, "election": "P", "turnout": 53.8},
+    {"year": 2014, "election": "M", "turnout": 33.9},
+    {"year": 2016, "election": "P", "turnout": 55.5},
+    {"year": 2018, "election": "M", "turnout": 47.0},
+    {"year": 2020, "election": "P", "turnout": 62.0},
+    {"year": 2022, "election": "M", "turnout": 44.6},
+    {"year": 2024, "election": "P", "turnout": 59.7}
+  ]
+}
